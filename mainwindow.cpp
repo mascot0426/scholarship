@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QDebug>
+#include <QTimer> 
 #include "csvexporter.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -74,6 +75,13 @@ void MainWindow::setupMenuBar()
     
     // 文件菜单
     QMenu *fileMenu = menuBar->addMenu("文件(&F)");
+
+     // 添加"新建窗口"菜单项
+    QAction *newWindowAction = fileMenu->addAction("新建窗口(&N)");
+    newWindowAction->setShortcut(QKeySequence::New);
+    connect(newWindowAction, &QAction::triggered, this, &MainWindow::onNewWindow);
+    fileMenu->addSeparator();
+
     QAction *exportStatsAction = fileMenu->addAction("导出统计报表");
     connect(exportStatsAction, &QAction::triggered, this, &MainWindow::onExportStatistics);
     fileMenu->addSeparator();
@@ -117,6 +125,28 @@ void MainWindow::showLoginWindow()
 void MainWindow::onLogin()
 {
     showLoginWindow();
+}
+
+void MainWindow::onNewWindow()
+{
+    // 创建新窗口实例
+    MainWindow *newWindow = new MainWindow(nullptr);  // nullptr 表示独立窗口
+    newWindow->setAttribute(Qt::WA_DeleteOnClose);    // 关闭时自动删除
+    
+        // 可选：为新窗口添加编号以便区分
+        static int windowCount = 1;
+        QString title = windowTitle();
+        if (title.contains("窗口")) {
+            // 如果当前窗口已经有编号，新窗口使用下一个编号
+            newWindow->setWindowTitle(QString("校园活动管理系统 - 窗口 %1").arg(++windowCount));
+        } else {
+            // 第一个窗口保持原标题，新窗口添加编号
+            setWindowTitle("校园活动管理系统 - 窗口 1");
+            newWindow->setWindowTitle("校园活动管理系统 - 窗口 2");
+            windowCount = 2;
+        }
+        
+    newWindow->show();
 }
 
 void MainWindow::onLogout()

@@ -33,7 +33,7 @@ private slots:
     void onCategoriesReceived(const QStringList &categories);
     void onAnnouncementsReceived(const QList<QHash<QString, QString>> &announcements);
     void onNetworkError(const QString &error);
-
+    void onNewWindow();
 private:
     void setupUI();
     void setupMenuBar();
