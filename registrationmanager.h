@@ -29,6 +29,9 @@ private slots:
     void onRefreshRegistrations();
     void onViewActivityDetails();  // 新增：查看活动详情
     void onRegisterFromDetails();  // 新增：从详情对话框报名
+    void onCheckIn();  // 新增：签到
+    void onViewCheckInList();  // 新增：查看签到列表
+    void onViewCheckInStatistics();  // 新增：查看签到统计
 private:
     Database *database;
     UserRole userRole;
@@ -44,6 +47,9 @@ private:
     QPushButton *exportButton;
     QPushButton *selectActivityButton;
     QPushButton *viewDetailsButton;  // 新增：查看详情按钮
+    QPushButton *checkInButton;  // 新增：签到按钮
+    QPushButton *viewCheckInListButton;  // 新增：查看签到列表按钮
+    QPushButton *viewCheckInStatsButton;  // 新增：查看签到统计按钮
     QComboBox *activityComboBox;
     QLabel *statusLabel;
     QPushButton *refreshButton;  // 新增：刷新按钮

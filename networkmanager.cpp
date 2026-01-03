@@ -8,12 +8,16 @@ NetworkManager::NetworkManager(QObject *parent)
     , networkManager(new QNetworkAccessManager(this))
     , categoriesReply(nullptr)
     , announcementsReply(nullptr)
+    , syncActivityReply(nullptr)
+    , syncingActivityId(-1)
 {
     connect(networkManager, &QNetworkAccessManager::finished, this, [this](QNetworkReply *reply) {
         if (reply == categoriesReply) {
             onCategoriesReplyFinished();
         } else if (reply == announcementsReply) {
             onAnnouncementsReplyFinished();
+        } else if (reply == syncActivityReply) {
+            onSyncActivityReplyFinished();
         }
     });
 }
@@ -25,6 +29,9 @@ NetworkManager::~NetworkManager()
     }
     if (announcementsReply) {
         announcementsReply->deleteLater();
+    }
+    if (syncActivityReply) {
+        syncActivityReply->deleteLater();
     }
 }
 
@@ -156,6 +163,66 @@ void NetworkManager::onAnnouncementsReplyFinished()
     emit announcementsReceived(announcements);
     announcementsReply->deleteLater();
     announcementsReply = nullptr;
+}
+
+void NetworkManager::syncActivityToPlatform(int activityId, const QHash<QString, QVariant> &activityData)
+{
+    QUrl url(baseUrl + "/activities/sync");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    
+    // 构建JSON数据
+    QJsonObject json;
+    json["id"] = activityId;
+    json["title"] = activityData["title"].toString();
+    json["description"] = activityData["description"].toString();
+    json["category"] = activityData["category"].toString();
+    json["organizer"] = activityData["organizer"].toString();
+    json["start_time"] = activityData["start_time"].toDateTime().toString(Qt::ISODate);
+    json["end_time"] = activityData["end_time"].toDateTime().toString(Qt::ISODate);
+    json["max_participants"] = activityData["max_participants"].toInt();
+    json["location"] = activityData["location"].toString();
+    json["status"] = activityData["status"].toInt();
+    
+    QJsonDocument doc(json);
+    QByteArray data = doc.toJson();
+    
+    syncingActivityId = activityId;
+    syncActivityReply = networkManager->post(request, data);
+    
+    #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    connect(syncActivityReply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::errorOccurred),
+            this, &NetworkManager::onNetworkError);
+    #else
+    connect(syncActivityReply, static_cast<void(QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
+            this, &NetworkManager::onNetworkError);
+    #endif
+}
+
+void NetworkManager::onSyncActivityReplyFinished()
+{
+    if (!syncActivityReply) return;
+    
+    bool success = false;
+    int activityId = syncingActivityId;
+    
+    if (syncActivityReply->error() == QNetworkReply::NoError) {
+        QByteArray data = syncActivityReply->readAll();
+        QJsonParseError error;
+        QJsonDocument doc = QJsonDocument::fromJson(data, &error);
+        
+        if (error.error == QJsonParseError::NoError && doc.isObject()) {
+            QJsonObject obj = doc.object();
+            if (obj.contains("success") && obj["success"].toBool()) {
+                success = true;
+            }
+        }
+    }
+    
+    emit activitySynced(activityId, success);
+    syncActivityReply->deleteLater();
+    syncActivityReply = nullptr;
+    syncingActivityId = -1;
 }
 
 void NetworkManager::onNetworkError(QNetworkReply::NetworkError error)

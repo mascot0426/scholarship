@@ -21,21 +21,26 @@ public:
 
     void fetchActivityCategories();
     void fetchAnnouncements();
+    void syncActivityToPlatform(int activityId, const QHash<QString, QVariant> &activityData);
 
 signals:
     void categoriesReceived(const QStringList &categories);
     void announcementsReceived(const QList<QHash<QString, QString>> &announcements);
+    void activitySynced(int activityId, bool success);
     void errorOccurred(const QString &error);
 
 private slots:
     void onCategoriesReplyFinished();
     void onAnnouncementsReplyFinished();
+    void onSyncActivityReplyFinished();
     void onNetworkError(QNetworkReply::NetworkError error);
 
 private:
     QNetworkAccessManager *networkManager;
     QNetworkReply *categoriesReply;
     QNetworkReply *announcementsReply;
+    QNetworkReply *syncActivityReply;
+    int syncingActivityId;
     
     // 模拟服务器URL（实际使用时需要替换为真实服务器地址）
     QString baseUrl = "http://localhost:8080/api";

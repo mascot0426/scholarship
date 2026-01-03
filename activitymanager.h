@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QDateTime>
 #include "database.h"
+#include "networkmanager.h"
 
 QT_BEGIN_NAMESPACE
 class QTableWidget;
@@ -21,7 +22,7 @@ class ActivityManager : public QWidget
     Q_OBJECT
 
 public:
-    explicit ActivityManager(Database *db, UserRole role, const QString &username, QWidget *parent = nullptr);
+    explicit ActivityManager(Database *db, UserRole role, const QString &username, NetworkManager *networkMgr = nullptr, QWidget *parent = nullptr);
     void refreshActivities();
 
 private slots:
@@ -35,6 +36,7 @@ private slots:
 
 private:
     Database *database;
+    NetworkManager *networkManager;
     UserRole userRole;
     QString currentUsername;
     

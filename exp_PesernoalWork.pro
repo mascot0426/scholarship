@@ -17,7 +17,8 @@ SOURCES += \
     registrationmanager.cpp \
     conflictchecker.cpp \
     networkmanager.cpp \
-    csvexporter.cpp
+    csvexporter.cpp \
+    exportthread.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -27,7 +28,8 @@ HEADERS += \
     registrationmanager.h \
     conflictchecker.h \
     networkmanager.h \
-    csvexporter.h
+    csvexporter.h \
+    exportthread.h
 
 FORMS += \
     mainwindow.ui \

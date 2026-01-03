@@ -82,6 +82,7 @@ bool Database::createTables()
             student_name TEXT NOT NULL,
             status INTEGER DEFAULT 0,
             registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            checkin_time DATETIME,
             FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
             UNIQUE(activity_id, student_id)
         )
@@ -115,6 +116,25 @@ bool Database::createTables()
     query.exec("CREATE INDEX IF NOT EXISTS idx_registrations_student ON registrations(student_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_waitlist_activity ON waitlist(activity_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status)");
+    
+    // 数据库迁移：为已存在的表添加签到字段（如果不存在）
+    QSqlQuery checkColumnQuery(db);
+    checkColumnQuery.prepare("PRAGMA table_info(registrations)");
+    bool hasCheckinColumn = false;
+    if (checkColumnQuery.exec()) {
+        while (checkColumnQuery.next()) {
+            if (checkColumnQuery.value("name").toString() == "checkin_time") {
+                hasCheckinColumn = true;
+                break;
+            }
+        }
+    }
+    if (!hasCheckinColumn) {
+        query.prepare("ALTER TABLE registrations ADD COLUMN checkin_time DATETIME");
+        if (!query.exec()) {
+            qDebug() << "Warning: Failed to add checkin_time column:" << query.lastError().text();
+        }
+    }
     
     // 插入默认管理员账户（如果不存在）
     query.prepare("SELECT COUNT(*) FROM users WHERE username = 'admin'");
@@ -604,5 +624,106 @@ QList<QHash<QString, QVariant>> Database::getAllStatistics()
     }
     
     return allStats;
+}
+
+bool Database::checkIn(int activityId, const QString &studentId)
+{
+    // 检查是否已报名
+    if (!isRegistered(activityId, studentId)) {
+        return false;
+    }
+    
+    // 检查是否已签到
+    if (isCheckedIn(activityId, studentId)) {
+        return false;
+    }
+    
+    // 检查活动是否已开始
+    QHash<QString, QVariant> activity = getActivity(activityId);
+    QDateTime startTime = activity["start_time"].toDateTime();
+    QDateTime currentTime = QDateTime::currentDateTime();
+    
+    if (currentTime < startTime) {
+        return false; // 活动尚未开始
+    }
+    
+    // 执行签到
+    QSqlQuery query(db);
+    query.prepare("UPDATE registrations SET checkin_time = ? WHERE activity_id = ? AND student_id = ?");
+    query.addBindValue(currentTime);
+    query.addBindValue(activityId);
+    query.addBindValue(studentId);
+    
+    return query.exec();
+}
+
+bool Database::isCheckedIn(int activityId, const QString &studentId)
+{
+    QSqlQuery query(db);
+    query.prepare("SELECT COUNT(*) FROM registrations WHERE activity_id = ? AND student_id = ? AND checkin_time IS NOT NULL");
+    query.addBindValue(activityId);
+    query.addBindValue(studentId);
+    
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt() > 0;
+    }
+    
+    return false;
+}
+
+QList<QHash<QString, QVariant>> Database::getCheckInList(int activityId)
+{
+    QList<QHash<QString, QVariant>> checkInList;
+    QSqlQuery query(db);
+    query.prepare(R"(
+        SELECT student_id, student_name, checkin_time
+        FROM registrations
+        WHERE activity_id = ? AND checkin_time IS NOT NULL
+        ORDER BY checkin_time
+    )");
+    query.addBindValue(activityId);
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QHash<QString, QVariant> item;
+            item["student_id"] = query.value("student_id");
+            item["student_name"] = query.value("student_name");
+            item["checkin_time"] = query.value("checkin_time");
+            checkInList.append(item);
+        }
+    }
+    
+    return checkInList;
+}
+
+QHash<QString, QVariant> Database::getCheckInStatistics(int activityId)
+{
+    QHash<QString, QVariant> stats;
+    QSqlQuery query(db);
+    
+    query.prepare(R"(
+        SELECT 
+            COUNT(*) as total_registered,
+            COUNT(checkin_time) as total_checked_in,
+            a.max_participants
+        FROM registrations r
+        JOIN activities a ON r.activity_id = a.id
+        WHERE r.activity_id = ?
+    )");
+    query.addBindValue(activityId);
+    
+    if (query.exec() && query.next()) {
+        int totalRegistered = query.value("total_registered").toInt();
+        int totalCheckedIn = query.value("total_checked_in").toInt();
+        int maxParticipants = query.value("max_participants").toInt();
+        
+        stats["total_registered"] = totalRegistered;
+        stats["total_checked_in"] = totalCheckedIn;
+        stats["max_participants"] = maxParticipants;
+        stats["checkin_rate"] = totalRegistered > 0 ? (double)totalCheckedIn / totalRegistered * 100.0 : 0.0;
+        stats["not_checked_in"] = totalRegistered - totalCheckedIn;
+    }
+    
+    return stats;
 }
 

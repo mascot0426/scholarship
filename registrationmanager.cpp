@@ -94,9 +94,13 @@ void RegistrationManager::setupUI()
         
         QHBoxLayout *myRegButtonLayout = new QHBoxLayout();
         cancelButton = new QPushButton("取消报名");
+        checkInButton = new QPushButton("签到");
         myRegButtonLayout->addWidget(cancelButton);
+        myRegButtonLayout->addWidget(checkInButton);
         myRegButtonLayout->addStretch();
         myRegistrationsLayout->addLayout(myRegButtonLayout);
+        
+        connect(checkInButton, &QPushButton::clicked, this, &RegistrationManager::onCheckIn);
         
         registrationsTable = new QTableWidget();
         registrationsTable->setColumnCount(6);
@@ -137,11 +141,22 @@ void RegistrationManager::setupUI()
             activityComboBox->addItem(text, activity["id"].toInt());
         }
         
+        checkInButton = new QPushButton("签到管理");
+        viewCheckInListButton = new QPushButton("查看签到列表");
+        viewCheckInStatsButton = new QPushButton("签到统计");
+        
         buttonLayout->addWidget(activityLabel);
         buttonLayout->addWidget(activityComboBox);
         buttonLayout->addWidget(selectActivityButton);
         buttonLayout->addWidget(waitlistButton);
+        buttonLayout->addWidget(checkInButton);
+        buttonLayout->addWidget(viewCheckInListButton);
+        buttonLayout->addWidget(viewCheckInStatsButton);
         buttonLayout->addWidget(exportButton);
+        
+        connect(checkInButton, &QPushButton::clicked, this, &RegistrationManager::onCheckIn);
+        connect(viewCheckInListButton, &QPushButton::clicked, this, &RegistrationManager::onViewCheckInList);
+        connect(viewCheckInStatsButton, &QPushButton::clicked, this, &RegistrationManager::onViewCheckInStatistics);
         
         connect(selectActivityButton, &QPushButton::clicked, this, [this]() {
             int activityId = activityComboBox->currentData().toInt();
@@ -621,4 +636,130 @@ void RegistrationManager::onRegisterFromDetails()
             QMessageBox::warning(this, "失败", "报名失败！");
         }
     }
+}
+
+void RegistrationManager::onCheckIn()
+{
+    int activityId = activityComboBox->currentData().toInt();
+    if (activityId <= 0) {
+        QMessageBox::warning(this, "提示", "请选择活动！");
+        return;
+    }
+    
+    // 学生签到
+    if (userRole == UserRole::Student) {
+        if (database->checkIn(activityId, currentStudentId)) {
+            QMessageBox::information(this, "成功", "签到成功！");
+            refreshRegistrations();
+        } else {
+            if (database->isCheckedIn(activityId, currentStudentId)) {
+                QMessageBox::information(this, "提示", "您已经签到过了！");
+            } else {
+                QMessageBox::warning(this, "失败", "签到失败！请确认您已报名且活动已开始。");
+            }
+        }
+    } else {
+        // 管理员/发起人：为学生签到
+        bool ok;
+        QString studentId = QInputDialog::getText(this, "学生签到", "请输入学号：", 
+                                                 QLineEdit::Normal, "", &ok);
+        if (!ok || studentId.isEmpty()) {
+            return;
+        }
+        
+        if (database->checkIn(activityId, studentId)) {
+            QMessageBox::information(this, "成功", QString("学号 %1 签到成功！").arg(studentId));
+            refreshRegistrations();
+        } else {
+            if (database->isCheckedIn(activityId, studentId)) {
+                QMessageBox::information(this, "提示", QString("学号 %1 已经签到过了！").arg(studentId));
+            } else {
+                QMessageBox::warning(this, "失败", QString("学号 %1 签到失败！请确认该学生已报名且活动已开始。").arg(studentId));
+            }
+        }
+    }
+}
+
+void RegistrationManager::onViewCheckInList()
+{
+    int activityId = activityComboBox->currentData().toInt();
+    if (activityId <= 0) {
+        QMessageBox::warning(this, "提示", "请选择活动！");
+        return;
+    }
+    
+    QList<QHash<QString, QVariant>> checkInList = database->getCheckInList(activityId);
+    
+    if (checkInList.isEmpty()) {
+        QMessageBox::information(this, "签到列表", "该活动暂无签到记录！");
+        return;
+    }
+    
+    QDialog dialog(this);
+    dialog.setWindowTitle("签到列表");
+    dialog.setMinimumSize(500, 400);
+    
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    
+    QTableWidget *table = new QTableWidget();
+    table->setColumnCount(3);
+    table->setHorizontalHeaderLabels(QStringList() << "学号" << "姓名" << "签到时间");
+    table->setRowCount(checkInList.size());
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->horizontalHeader()->setStretchLastSection(true);
+    
+    for (int i = 0; i < checkInList.size(); ++i) {
+        const auto &item = checkInList[i];
+        table->setItem(i, 0, new QTableWidgetItem(item["student_id"].toString()));
+        table->setItem(i, 1, new QTableWidgetItem(item["student_name"].toString()));
+        table->setItem(i, 2, new QTableWidgetItem(item["checkin_time"].toDateTime().toString("yyyy-MM-dd hh:mm:ss")));
+    }
+    
+    layout->addWidget(table);
+    
+    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok);
+    layout->addWidget(buttonBox);
+    connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    
+    dialog.exec();
+}
+
+void RegistrationManager::onViewCheckInStatistics()
+{
+    int activityId = activityComboBox->currentData().toInt();
+    if (activityId <= 0) {
+        QMessageBox::warning(this, "提示", "请选择活动！");
+        return;
+    }
+    
+    QHash<QString, QVariant> stats = database->getCheckInStatistics(activityId);
+    QHash<QString, QVariant> activity = database->getActivity(activityId);
+    
+    if (stats.isEmpty()) {
+        QMessageBox::warning(this, "错误", "无法获取签到统计信息！");
+        return;
+    }
+    
+    int totalRegistered = stats["total_registered"].toInt();
+    int totalCheckedIn = stats["total_checked_in"].toInt();
+    int maxParticipants = stats["max_participants"].toInt();
+    double checkinRate = stats["checkin_rate"].toDouble();
+    int notCheckedIn = stats["not_checked_in"].toInt();
+    
+    QString message = QString(
+        "活动：%1\n\n"
+        "报名统计：\n"
+        "  最大人数：%2\n"
+        "  已报名：%3\n"
+        "  已签到：%4\n"
+        "  未签到：%5\n"
+        "  签到率：%6%\n"
+    ).arg(activity["title"].toString())
+     .arg(maxParticipants)
+     .arg(totalRegistered)
+     .arg(totalCheckedIn)
+     .arg(notCheckedIn)
+     .arg(QString::number(checkinRate, 'f', 2));
+    
+    QMessageBox::information(this, "签到统计", message);
 }

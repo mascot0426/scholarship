@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QByteArray>
+#include <QTextCodec>
 #include <QDateTime>
 #include <QDebug>
 
@@ -27,42 +28,45 @@ bool CsvExporter::exportRegistrations(const QString &filename,
                                       const QHash<QString, QVariant> &activity)
 {
     QFile file(filename);
+    // 使用二进制模式打开
     if (!file.open(QIODevice::WriteOnly)) {
         qDebug() << "Failed to open file for writing:" << filename;
         return false;
     }
     
-    // 先写入UTF-8 BOM字节（Excel需要BOM来识别UTF-8编码）
+    // 获取UTF-8编码器
+    QTextCodec *utf8Codec = QTextCodec::codecForName("UTF-8");
+    if (!utf8Codec) {
+        qDebug() << "UTF-8 codec not available";
+        file.close();
+        return false;
+    }
+    
+    // 写入UTF-8 BOM
     QByteArray bom;
-    bom.append(0xEF);
-    bom.append(0xBB);
-    bom.append(0xBF);
+    bom.append(static_cast<char>(0xEF));
+    bom.append(static_cast<char>(0xBB));
+    bom.append(static_cast<char>(0xBF));
     file.write(bom);
     
-    QTextStream out(&file);
-    
-    // 设置UTF-8编码
-    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    out.setEncoding(QStringConverter::Utf8);
-    #else
-    out.setCodec("UTF-8");
-    #endif
+    // 构建CSV内容
+    QString content;
     
     // 写入活动信息
-    out << "活动信息\n";
-    out << "活动标题," << escapeCsvField(activity["title"].toString()) << "\n";
-    out << "活动类别," << escapeCsvField(activity["category"].toString()) << "\n";
-    out << "发起人," << escapeCsvField(activity["organizer"].toString()) << "\n";
-    out << "开始时间," << activity["start_time"].toDateTime().toString("yyyy-MM-dd hh:mm") << "\n";
-    out << "结束时间," << activity["end_time"].toDateTime().toString("yyyy-MM-dd hh:mm") << "\n";
-    out << "地点," << escapeCsvField(activity["location"].toString()) << "\n";
-    out << "最大人数," << activity["max_participants"].toString() << "\n";
-    out << "当前人数," << activity["current_participants"].toString() << "\n";
-    out << "\n";
+    content += "活动信息\n";
+    content += "活动标题," + escapeCsvField(activity["title"].toString()) + "\n";
+    content += "活动类别," + escapeCsvField(activity["category"].toString()) + "\n";
+    content += "发起人," + escapeCsvField(activity["organizer"].toString()) + "\n";
+    content += "开始时间," + activity["start_time"].toDateTime().toString("yyyy-MM-dd hh:mm") + "\n";
+    content += "结束时间," + activity["end_time"].toDateTime().toString("yyyy-MM-dd hh:mm") + "\n";
+    content += "地点," + escapeCsvField(activity["location"].toString()) + "\n";
+    content += "最大人数," + activity["max_participants"].toString() + "\n";
+    content += "当前人数," + activity["current_participants"].toString() + "\n";
+    content += "\n";
     
     // 写入报名列表
-    out << "报名名单\n";
-    out << "序号,学号,姓名,报名时间,状态\n";
+    content += "报名名单\n";
+    content += "序号,学号,姓名,报名时间,状态\n";
     
     for (int i = 0; i < registrations.size(); ++i) {
         const auto &reg = registrations[i];
@@ -76,12 +80,16 @@ bool CsvExporter::exportRegistrations(const QString &filename,
             case RegistrationStatus::Confirmed: statusText = "已确认"; break;
         }
         
-        out << (i + 1) << ","
-            << escapeCsvField(reg["student_id"].toString()) << ","
-            << escapeCsvField(reg["student_name"].toString()) << ","
-            << reg["registered_at"].toDateTime().toString("yyyy-MM-dd hh:mm") << ","
-            << escapeCsvField(statusText) << "\n";
+        content += QString::number(i + 1) + ","
+            + escapeCsvField(reg["student_id"].toString()) + ","
+            + escapeCsvField(reg["student_name"].toString()) + ","
+            + reg["registered_at"].toDateTime().toString("yyyy-MM-dd hh:mm") + ","
+            + escapeCsvField(statusText) + "\n";
     }
+    
+    // 将内容转换为UTF-8字节并写入文件
+    QByteArray utf8Data = utf8Codec->fromUnicode(content);
+    file.write(utf8Data);
     
     file.close();
     return true;
@@ -91,29 +99,32 @@ bool CsvExporter::exportStatistics(const QString &filename,
                                    const QList<QHash<QString, QVariant>> &statistics)
 {
     QFile file(filename);
+    // 使用二进制模式打开
     if (!file.open(QIODevice::WriteOnly)) {
         qDebug() << "Failed to open file for writing:" << filename;
         return false;
     }
     
-    // 先写入UTF-8 BOM字节（Excel需要BOM来识别UTF-8编码）
+    // 获取UTF-8编码器
+    QTextCodec *utf8Codec = QTextCodec::codecForName("UTF-8");
+    if (!utf8Codec) {
+        qDebug() << "UTF-8 codec not available";
+        file.close();
+        return false;
+    }
+    
+    // 写入UTF-8 BOM
     QByteArray bom;
-    bom.append(0xEF);
-    bom.append(0xBB);
-    bom.append(0xBF);
+    bom.append(static_cast<char>(0xEF));
+    bom.append(static_cast<char>(0xBB));
+    bom.append(static_cast<char>(0xBF));
     file.write(bom);
     
-    QTextStream out(&file);
-    
-    // 设置UTF-8编码
-    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    out.setEncoding(QStringConverter::Utf8);
-    #else
-    out.setCodec("UTF-8");
-    #endif
+    // 构建CSV内容
+    QString content;
     
     // 写入表头
-    out << "活动ID,活动标题,类别,发起人,开始时间,结束时间,最大人数,当前人数,候补人数,状态\n";
+    content += "活动ID,活动标题,类别,发起人,开始时间,结束时间,最大人数,当前人数,候补人数,状态\n";
     
     for (const auto &stat : statistics) {
         QString statusText;
@@ -126,17 +137,21 @@ bool CsvExporter::exportStatistics(const QString &filename,
             case ActivityStatus::Finished: statusText = "已结束"; break;
         }
         
-        out << stat["id"].toString() << ","
-            << escapeCsvField(stat["title"].toString()) << ","
-            << escapeCsvField(stat["category"].toString()) << ","
-            << escapeCsvField(stat["organizer"].toString()) << ","
-            << stat["start_time"].toDateTime().toString("yyyy-MM-dd hh:mm") << ","
-            << stat["end_time"].toDateTime().toString("yyyy-MM-dd hh:mm") << ","
-            << stat["max_participants"].toString() << ","
-            << stat["current_participants"].toString() << ","
-            << stat["waitlist_count"].toString() << ","
-            << escapeCsvField(statusText) << "\n";
+        content += stat["id"].toString() + ","
+            + escapeCsvField(stat["title"].toString()) + ","
+            + escapeCsvField(stat["category"].toString()) + ","
+            + escapeCsvField(stat["organizer"].toString()) + ","
+            + stat["start_time"].toDateTime().toString("yyyy-MM-dd hh:mm") + ","
+            + stat["end_time"].toDateTime().toString("yyyy-MM-dd hh:mm") + ","
+            + stat["max_participants"].toString() + ","
+            + stat["current_participants"].toString() + ","
+            + stat["waitlist_count"].toString() + ","
+            + escapeCsvField(statusText) + "\n";
     }
+    
+    // 将内容转换为UTF-8字节并写入文件
+    QByteArray utf8Data = utf8Codec->fromUnicode(content);
+    file.write(utf8Data);
     
     file.close();
     return true;

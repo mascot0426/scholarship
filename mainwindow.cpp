@@ -11,6 +11,7 @@
 #include <QDebug>
 #include <QTimer> 
 #include "csvexporter.h"
+#include "exportthread.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -20,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
     , registrationManager(nullptr)
     , networkManager(new NetworkManager(this))
     , conflictChecker(nullptr)
+    , exportThread(nullptr)
     , currentRole(UserRole::Student)
     , isLoggedIn(false)
 {
@@ -193,7 +195,7 @@ void MainWindow::updateUIForRole()
     userLabel->setText(QString("用户：%1 (%2) - %3").arg(currentName).arg(currentUsername).arg(roleText));
     
     // 创建活动管理标签页
-    activityManager = new ActivityManager(database, currentRole, currentUsername, this);
+    activityManager = new ActivityManager(database, currentRole, currentUsername, networkManager, this);
     tabWidget->addTab(activityManager, "活动管理");
     
     // 创建报名管理标签页

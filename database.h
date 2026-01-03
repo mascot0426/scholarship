@@ -77,6 +77,12 @@ public:
                                                       const QDateTime &endTime,
                                                       int excludeActivityId = -1);
     
+    // 签到相关操作
+    bool checkIn(int activityId, const QString &studentId);
+    bool isCheckedIn(int activityId, const QString &studentId);
+    QList<QHash<QString, QVariant>> getCheckInList(int activityId);
+    QHash<QString, QVariant> getCheckInStatistics(int activityId);
+    
     // 统计信息
     QHash<QString, QVariant> getActivityStatistics(int activityId);
     QList<QHash<QString, QVariant>> getAllStatistics();

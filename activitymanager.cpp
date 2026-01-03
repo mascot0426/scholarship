@@ -16,9 +16,10 @@
 #include <QHeaderView>
 #include <QDebug>
 
-ActivityManager::ActivityManager(Database *db, UserRole role, const QString &username, QWidget *parent)
+ActivityManager::ActivityManager(Database *db, UserRole role, const QString &username, NetworkManager *networkMgr, QWidget *parent)
     : QWidget(parent)
     , database(db)
+    , networkManager(networkMgr)
     , userRole(role)
     , currentUsername(username)
 {
@@ -217,6 +218,29 @@ void ActivityManager::onApproveActivity()
     
     if (database->updateActivityStatus(activityId, ActivityStatus::Approved)) {
         QMessageBox::information(this, "成功", "活动已批准！");
+        
+        // 同步到校园平台
+        if (networkManager) {
+            QHash<QString, QVariant> activity = database->getActivity(activityId);
+            if (!activity.isEmpty()) {
+                networkManager->syncActivityToPlatform(activityId, activity);
+                // 连接信号以显示同步结果
+                QMetaObject::Connection *connection = new QMetaObject::Connection();
+                *connection = connect(networkManager, &NetworkManager::activitySynced, this, [this, activityId, connection](int id, bool success) {
+                    if (id == activityId) {
+                        if (success) {
+                            QMessageBox::information(this, "同步成功", "活动已同步到校园平台！");
+                        } else {
+                            QMessageBox::warning(this, "同步失败", "活动同步到校园平台失败，请检查网络连接！");
+                        }
+                        // 断开连接（单次触发）
+                        disconnect(*connection);
+                        delete connection;
+                    }
+                });
+            }
+        }
+        
         refreshActivities();
     } else {
         QMessageBox::warning(this, "失败", "操作失败！");

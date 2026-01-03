@@ -8,6 +8,7 @@
 #include "registrationmanager.h"
 #include "networkmanager.h"
 #include "conflictchecker.h"
+#include "exportthread.h"
 
 QT_BEGIN_NAMESPACE
 class QTabWidget;
@@ -46,6 +47,7 @@ private:
     RegistrationManager *registrationManager;
     NetworkManager *networkManager;
     ConflictChecker *conflictChecker;
+    ExportThread *exportThread;
     
     QTabWidget *tabWidget;
     QLabel *statusLabel;
