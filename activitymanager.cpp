@@ -41,7 +41,13 @@ void ActivityManager::setupUI()
     
     // 按钮栏
     QHBoxLayout *buttonLayout = new QHBoxLayout();
-    
+
+     // 添加刷新按钮（在所有按钮之前）
+     refreshButton = new QPushButton("刷新");
+     refreshButton->setShortcut(QKeySequence::Refresh);  // F5快捷键
+     buttonLayout->addWidget(refreshButton);
+     connect(refreshButton, &QPushButton::clicked, this, &ActivityManager::onRefreshActivities);
+
     if (userRole == UserRole::Organizer || userRole == UserRole::Admin) {
         createButton = new QPushButton("发布活动");
         buttonLayout->addWidget(createButton);
@@ -194,8 +200,8 @@ void ActivityManager::onCreateActivity()
         
         if (activityId > 0) {
             QMessageBox::information(this, "成功", "活动发布成功，等待管理员审批！");
-            refreshActivities();
-        } else {
+            refreshActivities(); // 添加这一行
+        } else {    
             QMessageBox::warning(this, "失败", "活动发布失败！");
         }
     }
@@ -337,3 +343,7 @@ void ActivityManager::showActivityDialog(const QHash<QString, QVariant> &activit
     dialog.exec();
 }
 
+void ActivityManager::onRefreshActivities()
+{
+    refreshActivities();
+}

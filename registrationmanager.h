@@ -25,7 +25,7 @@ private slots:
     void onViewWaitlist();
     void onExportCSV();
     void onRegistrationSelectionChanged();
-
+    void onRefreshRegistrations();
 private:
     Database *database;
     UserRole userRole;
@@ -41,7 +41,7 @@ private:
     QPushButton *selectActivityButton;
     QComboBox *activityComboBox;
     QLabel *statusLabel;
-    
+    QPushButton *refreshButton;  // 新增：刷新按钮
     void setupUI();
     void populateTable();
     int getSelectedActivityId();

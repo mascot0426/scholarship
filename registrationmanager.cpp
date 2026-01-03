@@ -47,7 +47,12 @@ void RegistrationManager::setupUI()
     
     // 按钮栏
     QHBoxLayout *buttonLayout = new QHBoxLayout();
-    
+     // 添加刷新按钮（在所有按钮之前）
+    refreshButton = new QPushButton("刷新");
+    refreshButton->setShortcut(QKeySequence::Refresh);  // F5快捷键
+    buttonLayout->addWidget(refreshButton);
+    connect(refreshButton, &QPushButton::clicked, this, &RegistrationManager::onRefreshRegistrations);
+
     if (userRole == UserRole::Student) {
         registerButton = new QPushButton("报名活动");
         cancelButton = new QPushButton("取消报名");
@@ -353,3 +358,7 @@ void RegistrationManager::showConflictDialog(const QList<QHash<QString, QVariant
     QMessageBox::warning(this, "时间冲突", message);
 }
 
+void RegistrationManager::onRefreshRegistrations()
+{
+    refreshRegistrations();
+}
