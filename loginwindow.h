@@ -24,7 +24,7 @@ public:
 private slots:
     void onLoginButtonClicked();
     void onRegisterButtonClicked();
-
+    void onNewWindowButtonClicked();  // 新增这一行
 private:
     Ui::LoginWindow *ui;
     Database *database;

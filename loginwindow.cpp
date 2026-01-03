@@ -3,6 +3,7 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QDebug>
+#include "mainwindow.h"
 
 LoginWindow::LoginWindow(Database *db, QWidget *parent)
     : QDialog(parent)
@@ -17,7 +18,7 @@ LoginWindow::LoginWindow(Database *db, QWidget *parent)
     // 连接信号和槽
     connect(ui->loginButton, &QPushButton::clicked, this, &LoginWindow::onLoginButtonClicked);
     connect(ui->registerButton, &QPushButton::clicked, this, &LoginWindow::onRegisterButtonClicked);
-    
+    connect(ui->newWindowButton, &QPushButton::clicked, this, &LoginWindow::onNewWindowButtonClicked);  // 新增这一行
     // 设置角色选择下拉框
     ui->roleComboBox->addItem("学生", static_cast<int>(UserRole::Student));
     ui->roleComboBox->addItem("发起人", static_cast<int>(UserRole::Organizer));
@@ -96,3 +97,10 @@ void LoginWindow::onRegisterButtonClicked()
     }
 }
 
+void LoginWindow::onNewWindowButtonClicked()
+{
+    // 创建新的主窗口实例
+    MainWindow *newWindow = new MainWindow(nullptr);
+    newWindow->setAttribute(Qt::WA_DeleteOnClose);
+    newWindow->show();
+}

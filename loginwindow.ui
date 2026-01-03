@@ -117,6 +117,13 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="newWindowButton">
+       <property name="text">
+        <string>新建窗口</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="registerButton">
        <property name="text">
         <string>注册</string>
@@ -153,4 +160,3 @@
  <resources/>
  <connections/>
 </ui>
-
