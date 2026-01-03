@@ -9,6 +9,7 @@ class QTableWidget;
 class QPushButton;
 class QLabel;
 class QComboBox;
+class QTabWidget;  // 新增：标签页
 QT_END_NAMESPACE
 
 class RegistrationManager : public QWidget
@@ -26,25 +27,32 @@ private slots:
     void onExportCSV();
     void onRegistrationSelectionChanged();
     void onRefreshRegistrations();
+    void onViewActivityDetails();  // 新增：查看活动详情
+    void onRegisterFromDetails();  // 新增：从详情对话框报名
 private:
     Database *database;
     UserRole userRole;
     QString currentUsername;
     QString currentStudentId;
     QString currentStudentName;
-    
+    QTabWidget *tabWidget;  // 新增：标签页（学生角色使用）
     QTableWidget *registrationsTable;
+    QTableWidget *availableActivitiesTable;  // 新增：可报名活动表格
     QPushButton *registerButton;
     QPushButton *cancelButton;
     QPushButton *waitlistButton;
     QPushButton *exportButton;
     QPushButton *selectActivityButton;
+    QPushButton *viewDetailsButton;  // 新增：查看详情按钮
     QComboBox *activityComboBox;
     QLabel *statusLabel;
     QPushButton *refreshButton;  // 新增：刷新按钮
+    int selectedActivityIdForRegistration;  // 新增：当前选中的活动ID
     void setupUI();
     void populateTable();
+    void populateAvailableActivities();  // 新增：填充可报名活动列表
     int getSelectedActivityId();
+    void showActivityDetailsDialog(int activityId);  // 新增：显示活动详情对话框
     void showConflictDialog(const QList<QHash<QString, QVariant>> &conflicts);
 };
 

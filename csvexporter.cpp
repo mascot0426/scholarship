@@ -2,6 +2,7 @@
 #include "database.h"
 #include <QFile>
 #include <QTextStream>
+#include <QByteArray>
 #include <QDateTime>
 #include <QDebug>
 
@@ -26,16 +27,26 @@ bool CsvExporter::exportRegistrations(const QString &filename,
                                       const QHash<QString, QVariant> &activity)
 {
     QFile file(filename);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    if (!file.open(QIODevice::WriteOnly)) {
         qDebug() << "Failed to open file for writing:" << filename;
         return false;
     }
     
-    QTextStream out(&file);
-    out.setCodec("UTF-8");
+    // 先写入UTF-8 BOM字节（Excel需要BOM来识别UTF-8编码）
+    QByteArray bom;
+    bom.append(0xEF);
+    bom.append(0xBB);
+    bom.append(0xBF);
+    file.write(bom);
     
-    // 写入BOM以支持Excel正确显示中文
-    out << "\xEF\xBB\xBF";
+    QTextStream out(&file);
+    
+    // 设置UTF-8编码
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    out.setEncoding(QStringConverter::Utf8);
+    #else
+    out.setCodec("UTF-8");
+    #endif
     
     // 写入活动信息
     out << "活动信息\n";
@@ -80,16 +91,26 @@ bool CsvExporter::exportStatistics(const QString &filename,
                                    const QList<QHash<QString, QVariant>> &statistics)
 {
     QFile file(filename);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    if (!file.open(QIODevice::WriteOnly)) {
         qDebug() << "Failed to open file for writing:" << filename;
         return false;
     }
     
-    QTextStream out(&file);
-    out.setCodec("UTF-8");
+    // 先写入UTF-8 BOM字节（Excel需要BOM来识别UTF-8编码）
+    QByteArray bom;
+    bom.append(0xEF);
+    bom.append(0xBB);
+    bom.append(0xBF);
+    file.write(bom);
     
-    // 写入BOM
-    out << "\xEF\xBB\xBF";
+    QTextStream out(&file);
+    
+    // 设置UTF-8编码
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    out.setEncoding(QStringConverter::Utf8);
+    #else
+    out.setCodec("UTF-8");
+    #endif
     
     // 写入表头
     out << "活动ID,活动标题,类别,发起人,开始时间,结束时间,最大人数,当前人数,候补人数,状态\n";
