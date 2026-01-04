@@ -187,6 +187,10 @@ void NetworkManager::syncActivityToPlatform(int activityId, const QHash<QString,
     QJsonDocument doc(json);
     QByteArray data = doc.toJson();
     
+    qDebug() << "[同步请求] 活动ID:" << activityId;
+    qDebug() << "[同步请求] URL:" << url.toString();
+    qDebug() << "[同步请求] 数据:" << QString::fromUtf8(data);
+    
     syncingActivityId = activityId;
     syncActivityReply = networkManager->post(request, data);
     
@@ -208,17 +212,36 @@ void NetworkManager::onSyncActivityReplyFinished()
     
     if (syncActivityReply->error() == QNetworkReply::NoError) {
         QByteArray data = syncActivityReply->readAll();
+        qDebug() << "[同步响应] 活动ID:" << activityId << "响应数据:" << data;
+        
         QJsonParseError error;
         QJsonDocument doc = QJsonDocument::fromJson(data, &error);
         
-        if (error.error == QJsonParseError::NoError && doc.isObject()) {
+        if (error.error != QJsonParseError::NoError) {
+            qDebug() << "[同步错误] JSON解析失败:" << error.errorString();
+            qDebug() << "[同步错误] 响应内容:" << QString::fromUtf8(data);
+        } else if (doc.isObject()) {
             QJsonObject obj = doc.object();
-            if (obj.contains("success") && obj["success"].toBool()) {
-                success = true;
+            qDebug() << "[同步响应] JSON对象:" << obj;
+            
+            if (obj.contains("success")) {
+                success = obj["success"].toBool();
+                qDebug() << "[同步结果] 活动ID:" << activityId << "成功:" << success;
+                if (obj.contains("message")) {
+                    qDebug() << "[同步消息]:" << obj["message"].toString();
+                }
+            } else {
+                qDebug() << "[同步警告] 响应中缺少success字段";
             }
+        } else {
+            qDebug() << "[同步错误] 响应不是JSON对象";
         }
+    } else {
+        qDebug() << "[同步错误] 网络请求失败:" << syncActivityReply->errorString();
+        qDebug() << "[同步错误] 错误代码:" << syncActivityReply->error();
     }
     
+    qDebug() << "[同步完成] 活动ID:" << activityId << "最终结果:" << success;
     emit activitySynced(activityId, success);
     syncActivityReply->deleteLater();
     syncActivityReply = nullptr;

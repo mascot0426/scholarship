@@ -38,6 +38,7 @@ private slots:
 private:
     void setupUI();
     void setupMenuBar();
+    void setupNetworkConnections();
     void showLoginWindow();
     void updateUIForRole();
     

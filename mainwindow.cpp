@@ -33,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     
     setupUI();
     setupMenuBar();
+    setupNetworkConnections();
     showLoginWindow();
 }
 
@@ -226,24 +227,27 @@ void MainWindow::onExportStatistics()
     }
 }
 
+void MainWindow::setupNetworkConnections()
+{
+    // 连接网络管理器的信号，只连接一次
+    connect(networkManager, &NetworkManager::categoriesReceived, 
+            this, &MainWindow::onCategoriesReceived);
+    connect(networkManager, &NetworkManager::announcementsReceived,
+            this, &MainWindow::onAnnouncementsReceived);
+    connect(networkManager, &NetworkManager::errorOccurred,
+            this, &MainWindow::onNetworkError);
+}
+
 void MainWindow::onFetchCategories()
 {
     statusLabel->setText("正在获取活动类别...");
     networkManager->fetchActivityCategories();
-    connect(networkManager, &NetworkManager::categoriesReceived, 
-            this, &MainWindow::onCategoriesReceived);
-    connect(networkManager, &NetworkManager::errorOccurred,
-            this, &MainWindow::onNetworkError);
 }
 
 void MainWindow::onFetchAnnouncements()
 {
     statusLabel->setText("正在获取公告...");
     networkManager->fetchAnnouncements();
-    connect(networkManager, &NetworkManager::announcementsReceived,
-            this, &MainWindow::onAnnouncementsReceived);
-    connect(networkManager, &NetworkManager::errorOccurred,
-            this, &MainWindow::onNetworkError);
 }
 
 void MainWindow::onCategoriesReceived(const QStringList &categories)

@@ -14,6 +14,7 @@
 #include <QFormLayout>
 #include <QDialogButtonBox>
 #include <QHeaderView>
+#include <QTimer>
 #include <QDebug>
 
 ActivityManager::ActivityManager(Database *db, UserRole role, const QString &studentId, NetworkManager *networkMgr, QWidget *parent)
@@ -264,22 +265,38 @@ void ActivityManager::onApproveActivity()
         if (networkManager) {
             activity = database->getActivity(activityId);
             if (!activity.isEmpty()) {
+                qDebug() << "[活动批准] 准备同步活动ID:" << activityId;
                 networkManager->syncActivityToPlatform(activityId, activity);
                 // 连接信号以显示同步结果
                 QMetaObject::Connection *connection = new QMetaObject::Connection();
                 *connection = connect(networkManager, &NetworkManager::activitySynced, this, [this, activityId, connection](int id, bool success) {
+                    qDebug() << "[同步回调] 活动ID:" << id << "成功:" << success;
                     if (id == activityId) {
-                        if (success) {
-                            QMessageBox::information(this, "同步成功", "活动已同步到校园平台！");
-                        } else {
-                            QMessageBox::warning(this, "同步失败", "活动同步到校园平台失败，请检查网络连接！");
-                        }
-                        // 断开连接（单次触发）
+                        // 使用QTimer延迟显示，确保"活动已批准"对话框已关闭
+                        QTimer::singleShot(500, this, [this, success, connection]() {
+                            if (success) {
+                                qDebug() << "[同步成功] 显示成功提示";
+                                QMessageBox::information(this, "同步成功", "活动已同步到校园平台！");
+                            } else {
+                                qDebug() << "[同步失败] 显示失败提示";
+                                QMessageBox::warning(this, "同步失败", "活动同步到校园平台失败，请检查网络连接！");
+                            }
+                            // 断开连接（单次触发）
+                            disconnect(*connection);
+                            delete connection;
+                        });
+                    } else {
+                        qDebug() << "[同步回调] 活动ID不匹配，忽略。期望:" << activityId << "实际:" << id;
+                        // 即使ID不匹配也要清理连接
                         disconnect(*connection);
                         delete connection;
                     }
                 });
+            } else {
+                qDebug() << "[活动批准] 警告：无法获取活动数据，跳过同步";
             }
+        } else {
+            qDebug() << "[活动批准] 警告：NetworkManager为空，跳过同步";
         }
         
         refreshActivities();

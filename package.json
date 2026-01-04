@@ -1,0 +1,25 @@
+{
+  "name": "activity-management-test-server",
+  "version": "1.0.0",
+  "description": "校园活动管理系统测试服务器",
+  "main": "test_server.js",
+  "scripts": {
+    "start": "node test_server.js",
+    "dev": "nodemon test_server.js"
+  },
+  "keywords": [
+    "test",
+    "server",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+
