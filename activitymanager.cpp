@@ -162,6 +162,8 @@ void ActivityManager::onCreateActivity()
     maxParticipantsEdit->setMaximum(10000);
     maxParticipantsEdit->setValue(50);
     QLineEdit *locationEdit = new QLineEdit();
+    QLineEdit *checkinCodeEdit = new QLineEdit();
+    checkinCodeEdit->setPlaceholderText("建议6位数字，如：123456");
     
     formLayout->addRow("标题：", titleEdit);
     formLayout->addRow("描述：", descriptionEdit);
@@ -170,6 +172,7 @@ void ActivityManager::onCreateActivity()
     formLayout->addRow("结束时间：", endTimeEdit);
     formLayout->addRow("最大人数：", maxParticipantsEdit);
     formLayout->addRow("地点：", locationEdit);
+    formLayout->addRow("签到码：", checkinCodeEdit);
     
     QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     formLayout->addRow(buttonBox);
@@ -196,7 +199,8 @@ void ActivityManager::onCreateActivity()
             startTimeEdit->dateTime(),
             endTimeEdit->dateTime(),
             maxParticipantsEdit->value(),
-            locationEdit->text()
+            locationEdit->text(),
+            checkinCodeEdit->text().trimmed()
         );
         
         if (activityId > 0) {
@@ -216,12 +220,49 @@ void ActivityManager::onApproveActivity()
         return;
     }
     
+    // 获取当前活动的签到码
+    QHash<QString, QVariant> activity = database->getActivity(activityId);
+    QString currentCheckinCode = activity["checkin_code"].toString();
+    
+    // 显示对话框允许设置/修改签到码
+    QDialog checkinCodeDialog(this);
+    checkinCodeDialog.setWindowTitle("设置签到码");
+    checkinCodeDialog.setMinimumWidth(400);
+    
+    QFormLayout *formLayout = new QFormLayout(&checkinCodeDialog);
+    QLineEdit *checkinCodeEdit = new QLineEdit();
+    checkinCodeEdit->setPlaceholderText("建议6位数字，如：123456");
+    if (!currentCheckinCode.isEmpty()) {
+        checkinCodeEdit->setText(currentCheckinCode);
+    }
+    
+    QLabel *hintLabel = new QLabel("提示：签到码用于学生签到验证，可以为空（学生将无法签到）");
+    hintLabel->setWordWrap(true);
+    hintLabel->setStyleSheet("color: gray;");
+    
+    formLayout->addRow("签到码：", checkinCodeEdit);
+    formLayout->addRow("", hintLabel);
+    
+    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    formLayout->addRow(buttonBox);
+    
+    connect(buttonBox, &QDialogButtonBox::accepted, &checkinCodeDialog, &QDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::rejected, &checkinCodeDialog, &QDialog::reject);
+    
+    if (checkinCodeDialog.exec() == QDialog::Accepted) {
+        QString newCheckinCode = checkinCodeEdit->text().trimmed();
+        // 更新签到码
+        if (!database->updateCheckInCode(activityId, newCheckinCode)) {
+            QMessageBox::warning(this, "警告", "更新签到码失败，但将继续审批活动");
+        }
+    }
+    
     if (database->updateActivityStatus(activityId, ActivityStatus::Approved)) {
         QMessageBox::information(this, "成功", "活动已批准！");
         
         // 同步到校园平台
         if (networkManager) {
-            QHash<QString, QVariant> activity = database->getActivity(activityId);
+            activity = database->getActivity(activityId);
             if (!activity.isEmpty()) {
                 networkManager->syncActivityToPlatform(activityId, activity);
                 // 连接信号以显示同步结果
@@ -349,6 +390,16 @@ void ActivityManager::showActivityDialog(const QHash<QString, QVariant> &activit
     formLayout->addRow("当前人数：", currentLabel);
     formLayout->addRow("地点：", locationLabel);
     formLayout->addRow("状态：", statusLabel);
+    
+    // 仅管理员/发起人可见签到码
+    if (userRole == UserRole::Admin || userRole == UserRole::Organizer) {
+        QString checkinCode = activity["checkin_code"].toString();
+        QLabel *checkinCodeLabel = new QLabel(checkinCode.isEmpty() ? "未设置" : checkinCode);
+        if (checkinCode.isEmpty()) {
+            checkinCodeLabel->setStyleSheet("color: gray;");
+        }
+        formLayout->addRow("签到码：", checkinCodeLabel);
+    }
     
     layout->addLayout(formLayout);
     

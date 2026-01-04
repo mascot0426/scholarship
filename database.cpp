@@ -162,7 +162,8 @@ bool Database::createTables()
             status INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             approved_at DATETIME,
-            approved_by TEXT
+            approved_by TEXT,
+            checkin_code TEXT
         )
     )";
     
@@ -231,6 +232,25 @@ bool Database::createTables()
         query.prepare("ALTER TABLE registrations ADD COLUMN checkin_time DATETIME");
         if (!query.exec()) {
             qDebug() << "Warning: Failed to add checkin_time column:" << query.lastError().text();
+        }
+    }
+    
+    // 数据库迁移：为已存在的活动表添加签到码字段（如果不存在）
+    QSqlQuery checkCheckinCodeQuery(db);
+    checkCheckinCodeQuery.prepare("PRAGMA table_info(activities)");
+    bool hasCheckinCodeColumn = false;
+    if (checkCheckinCodeQuery.exec()) {
+        while (checkCheckinCodeQuery.next()) {
+            if (checkCheckinCodeQuery.value("name").toString() == "checkin_code") {
+                hasCheckinCodeColumn = true;
+                break;
+            }
+        }
+    }
+    if (!hasCheckinCodeColumn) {
+        query.prepare("ALTER TABLE activities ADD COLUMN checkin_code TEXT");
+        if (!query.exec()) {
+            qDebug() << "Warning: Failed to add checkin_code column:" << query.lastError().text();
         }
     }
     
@@ -311,13 +331,13 @@ bool Database::studentIdExists(const QString &studentId)
 int Database::createActivity(const QString &title, const QString &description,
                             const QString &category, const QString &organizer,
                             const QDateTime &startTime, const QDateTime &endTime,
-                            int maxParticipants, const QString &location)
+                            int maxParticipants, const QString &location, const QString &checkinCode)
 {
     QSqlQuery query(db);
     query.prepare(R"(
         INSERT INTO activities (title, description, category, organizer, start_time, 
-                               end_time, max_participants, location, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               end_time, max_participants, location, status, checkin_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
     query.addBindValue(title);
     query.addBindValue(description);
@@ -328,6 +348,7 @@ int Database::createActivity(const QString &title, const QString &description,
     query.addBindValue(maxParticipants);
     query.addBindValue(location);
     query.addBindValue(static_cast<int>(ActivityStatus::Pending));
+    query.addBindValue(checkinCode);
     
     if (!query.exec()) {
         qDebug() << "Error creating activity:" << query.lastError().text();
@@ -347,6 +368,29 @@ bool Database::updateActivityStatus(int activityId, ActivityStatus status)
     query.addBindValue(activityId);
     
     return query.exec();
+}
+
+bool Database::updateCheckInCode(int activityId, const QString &checkinCode)
+{
+    QSqlQuery query(db);
+    query.prepare("UPDATE activities SET checkin_code = ? WHERE id = ?");
+    query.addBindValue(checkinCode);
+    query.addBindValue(activityId);
+    
+    return query.exec();
+}
+
+QString Database::getCheckInCode(int activityId)
+{
+    QSqlQuery query(db);
+    query.prepare("SELECT checkin_code FROM activities WHERE id = ?");
+    query.addBindValue(activityId);
+    
+    if (query.exec() && query.next()) {
+        return query.value(0).toString();
+    }
+    
+    return QString();
 }
 
 QList<QHash<QString, QVariant>> Database::getActivities(const QString &filter)
@@ -375,6 +419,7 @@ QList<QHash<QString, QVariant>> Database::getActivities(const QString &filter)
             activity["location"] = query.value("location");
             activity["status"] = query.value("status");
             activity["created_at"] = query.value("created_at");
+            activity["checkin_code"] = query.value("checkin_code");
             activities.append(activity);
         }
     }
@@ -401,6 +446,7 @@ QHash<QString, QVariant> Database::getActivity(int activityId)
         activity["current_participants"] = query.value("current_participants");
         activity["location"] = query.value("location");
         activity["status"] = query.value("status");
+        activity["checkin_code"] = query.value("checkin_code");
     }
     
     return activity;
@@ -737,7 +783,7 @@ QList<QHash<QString, QVariant>> Database::getAllStatistics()
     return allStats;
 }
 
-bool Database::checkIn(int activityId, const QString &studentId)
+bool Database::checkIn(int activityId, const QString &studentId, const QString &checkinCode)
 {
     // 检查是否已报名
     if (!isRegistered(activityId, studentId)) {
@@ -756,6 +802,17 @@ bool Database::checkIn(int activityId, const QString &studentId)
     
     if (currentTime < startTime) {
         return false; // 活动尚未开始
+    }
+    
+    // 如果提供了签到码，需要验证（学生端需要，管理员/发起人端不提供签到码）
+    if (!checkinCode.isEmpty()) {
+        QString storedCheckinCode = activity["checkin_code"].toString();
+        if (storedCheckinCode.isEmpty()) {
+            return false; // 活动没有设置签到码
+        }
+        if (checkinCode != storedCheckinCode) {
+            return false; // 签到码不匹配
+        }
     }
     
     // 执行签到

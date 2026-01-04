@@ -645,26 +645,59 @@ void RegistrationManager::onRegisterFromDetails()
 
 void RegistrationManager::onCheckIn()
 {
-    int activityId = activityComboBox->currentData().toInt();
-    if (activityId <= 0) {
-        QMessageBox::warning(this, "提示", "请选择活动！");
-        return;
+    int activityId = -1;
+    
+    // 学生签到：从"我的报名"表格中获取活动ID
+    if (userRole == UserRole::Student) {
+        int row = registrationsTable->currentRow();
+        if (row < 0) {
+            QMessageBox::warning(this, "提示", "请选择要签到的活动！");
+            return;
+        }
+        QTableWidgetItem *item = registrationsTable->item(row, 0);
+        if (!item) {
+            QMessageBox::warning(this, "提示", "请选择要签到的活动！");
+            return;
+        }
+        activityId = item->text().toInt();
+    } else {
+        // 管理员/发起人：从下拉框选择活动
+        activityId = activityComboBox->currentData().toInt();
+        if (activityId <= 0) {
+            QMessageBox::warning(this, "提示", "请选择活动！");
+            return;
+        }
     }
     
-    // 学生签到
+    // 学生签到：需要输入签到码
     if (userRole == UserRole::Student) {
-        if (database->checkIn(activityId, currentStudentId)) {
+        // 检查活动是否设置了签到码
+        QString storedCheckinCode = database->getCheckInCode(activityId);
+        if (storedCheckinCode.isEmpty()) {
+            QMessageBox::warning(this, "签到失败", "该活动尚未设置签到码，请联系管理员或发起人！");
+            return;
+        }
+        
+        // 要求输入签到码
+        bool ok;
+        QString checkinCode = QInputDialog::getText(this, "学生签到", "请输入签到码：", 
+                                                    QLineEdit::Normal, "", &ok);
+        if (!ok || checkinCode.isEmpty()) {
+            return;
+        }
+        
+        if (database->checkIn(activityId, currentStudentId, checkinCode)) {
             QMessageBox::information(this, "成功", "签到成功！");
             refreshRegistrations();
         } else {
             if (database->isCheckedIn(activityId, currentStudentId)) {
                 QMessageBox::information(this, "提示", "您已经签到过了！");
             } else {
-                QMessageBox::warning(this, "失败", "签到失败！请确认您已报名且活动已开始。");
+                QMessageBox::warning(this, "失败", "签到失败！请确认：\n1. 您已报名该活动\n2. 活动已开始\n3. 签到码正确");
             }
         }
     } else {
-        // 管理员/发起人：为学生签到
+        // 管理员/发起人：为学生签到（不需要签到码）
         bool ok;
         QString studentId = QInputDialog::getText(this, "学生签到", "请输入学号：", 
                                                  QLineEdit::Normal, "", &ok);
@@ -672,7 +705,8 @@ void RegistrationManager::onCheckIn()
             return;
         }
         
-        if (database->checkIn(activityId, studentId)) {
+        // 管理员/发起人签到不需要验证签到码，传入空字符串
+        if (database->checkIn(activityId, studentId, "")) {
             QMessageBox::information(this, "成功", QString("学号 %1 签到成功！").arg(studentId));
             refreshRegistrations();
         } else {

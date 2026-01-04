@@ -56,8 +56,10 @@ public:
     int createActivity(const QString &title, const QString &description, 
                       const QString &category, const QString &organizer,
                       const QDateTime &startTime, const QDateTime &endTime,
-                      int maxParticipants, const QString &location);
+                      int maxParticipants, const QString &location, const QString &checkinCode = "");
     bool updateActivityStatus(int activityId, ActivityStatus status);
+    bool updateCheckInCode(int activityId, const QString &checkinCode);
+    QString getCheckInCode(int activityId);
     QList<QHash<QString, QVariant>> getActivities(const QString &filter = "");
     QHash<QString, QVariant> getActivity(int activityId);
     
@@ -79,7 +81,7 @@ public:
                                                       int excludeActivityId = -1);
     
     // 签到相关操作
-    bool checkIn(int activityId, const QString &studentId);
+    bool checkIn(int activityId, const QString &studentId, const QString &checkinCode = "");
     bool isCheckedIn(int activityId, const QString &studentId);
     QList<QHash<QString, QVariant>> getCheckInList(int activityId);
     QHash<QString, QVariant> getCheckInStatistics(int activityId);
