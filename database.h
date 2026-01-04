@@ -47,9 +47,10 @@ public:
     bool initializeDatabase();
     
     // 用户相关操作
-    bool addUser(const QString &username, const QString &password, UserRole role, const QString &name = "");
-    bool authenticateUser(const QString &username, const QString &password, UserRole &role, QString &name);
-    UserRole getUserRole(const QString &username);
+    bool addUser(const QString &studentId, const QString &password, UserRole role, const QString &name = "");
+    bool authenticateUser(const QString &studentId, const QString &password, UserRole &role, QString &name);
+    UserRole getUserRole(const QString &studentId);
+    bool studentIdExists(const QString &studentId);
     
     // 活动相关操作
     int createActivity(const QString &title, const QString &description, 

@@ -54,7 +54,7 @@ private:
     QLabel *userLabel;
     
     UserRole currentRole;
-    QString currentUsername;
+    QString currentStudentId;
     QString currentName;
     bool isLoggedIn;
 };

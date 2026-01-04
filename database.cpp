@@ -31,21 +31,119 @@ bool Database::createTables()
 {
     QSqlQuery query(db);
     
-    // 用户表
-    QString createUsersTable = R"(
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role INTEGER NOT NULL,
-            name TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    )";
+    // 检查users表是否存在，以及需要哪种迁移
+    bool needsUsernameMigration = false;
+    bool needsPrimaryKeyMigration = false;
+    bool hasIdField = false;
     
-    if (!query.exec(createUsersTable)) {
-        qDebug() << "Error creating users table:" << query.lastError().text();
-        return false;
+    query.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+    if (query.exec() && query.next()) {
+        // 表存在，检查表结构
+        QSqlQuery checkQuery(db);
+        checkQuery.prepare("PRAGMA table_info(users)");
+        if (checkQuery.exec()) {
+            while (checkQuery.next()) {
+                QString columnName = checkQuery.value("name").toString();
+                if (columnName == "username") {
+                    needsUsernameMigration = true;
+                }
+                if (columnName == "id") {
+                    hasIdField = true;
+                }
+            }
+        }
+        
+        // 如果表有id字段但没有将student_id设为主键，需要迁移主键
+        if (hasIdField) {
+            // 检查student_id是否为主键
+            checkQuery.prepare("PRAGMA table_info(users)");
+            bool studentIdIsPrimary = false;
+            if (checkQuery.exec()) {
+                while (checkQuery.next()) {
+                    QString columnName = checkQuery.value("name").toString();
+                    int pk = checkQuery.value("pk").toInt();
+                    if (columnName == "student_id" && pk == 1) {
+                        studentIdIsPrimary = true;
+                        break;
+                    }
+                }
+            }
+            if (!studentIdIsPrimary) {
+                needsPrimaryKeyMigration = true;
+            }
+        }
+    }
+    
+    // 如果需要迁移，执行数据迁移
+    if (needsUsernameMigration || needsPrimaryKeyMigration) {
+        qDebug() << "Migrating users table: setting student_id as primary key";
+        
+        // 先删除可能存在的临时表
+        query.exec("DROP TABLE IF EXISTS users_new");
+        
+        // 创建新表（student_id为主键）
+        QString createNewTable = R"(
+            CREATE TABLE users_new (
+                student_id TEXT PRIMARY KEY NOT NULL,
+                password TEXT NOT NULL,
+                role INTEGER NOT NULL,
+                name TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        )";
+        
+        if (!query.exec(createNewTable)) {
+            qDebug() << "Error creating new users table:" << query.lastError().text();
+            return false;
+        }
+        
+        // 迁移数据
+        if (needsUsernameMigration) {
+            // 从username字段迁移
+            query.prepare("INSERT INTO users_new (student_id, password, role, name, created_at) "
+                         "SELECT username, password, role, name, created_at FROM users");
+        } else {
+            // 从student_id字段迁移（已有student_id，只需移除id）
+            query.prepare("INSERT INTO users_new (student_id, password, role, name, created_at) "
+                         "SELECT student_id, password, role, name, created_at FROM users");
+        }
+        
+        if (!query.exec()) {
+            qDebug() << "Error migrating data:" << query.lastError().text();
+            query.exec("DROP TABLE IF EXISTS users_new");
+            return false;
+        }
+        
+        // 删除旧表
+        if (!query.exec("DROP TABLE users")) {
+            qDebug() << "Error dropping old table:" << query.lastError().text();
+            query.exec("DROP TABLE IF EXISTS users_new");
+            return false;
+        }
+        
+        // 重命名新表
+        if (!query.exec("ALTER TABLE users_new RENAME TO users")) {
+            qDebug() << "Error renaming table:" << query.lastError().text();
+            return false;
+        }
+        
+        qDebug() << "Migration completed successfully";
+    } else {
+        // 创建新表（如果不存在）- student_id为主键
+        QString createUsersTable = R"(
+            CREATE TABLE IF NOT EXISTS users (
+                student_id TEXT PRIMARY KEY NOT NULL,
+                password TEXT NOT NULL,
+                role INTEGER NOT NULL,
+                name TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        )";
+        
+        if (!query.exec(createUsersTable)) {
+            qDebug() << "Error creating users table:" << query.lastError().text();
+            return false;
+        }
     }
     
     // 活动表
@@ -137,7 +235,7 @@ bool Database::createTables()
     }
     
     // 插入默认管理员账户（如果不存在）
-    query.prepare("SELECT COUNT(*) FROM users WHERE username = 'admin'");
+    query.prepare("SELECT COUNT(*) FROM users WHERE student_id = 'admin'");
     if (query.exec() && query.next() && query.value(0).toInt() == 0) {
         addUser("admin", "admin123", UserRole::Admin, "系统管理员");
     }
@@ -152,11 +250,11 @@ QString Database::hashPassword(const QString &password)
     return hash.result().toHex();
 }
 
-bool Database::addUser(const QString &username, const QString &password, UserRole role, const QString &name)
+bool Database::addUser(const QString &studentId, const QString &password, UserRole role, const QString &name)
 {
     QSqlQuery query(db);
-    query.prepare("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)");
-    query.addBindValue(username);
+    query.prepare("INSERT INTO users (student_id, password, role, name) VALUES (?, ?, ?, ?)");
+    query.addBindValue(studentId);
     query.addBindValue(hashPassword(password));
     query.addBindValue(static_cast<int>(role));
     query.addBindValue(name);
@@ -164,11 +262,11 @@ bool Database::addUser(const QString &username, const QString &password, UserRol
     return query.exec();
 }
 
-bool Database::authenticateUser(const QString &username, const QString &password, UserRole &role, QString &name)
+bool Database::authenticateUser(const QString &studentId, const QString &password, UserRole &role, QString &name)
 {
     QSqlQuery query(db);
-    query.prepare("SELECT password, role, name FROM users WHERE username = ?");
-    query.addBindValue(username);
+    query.prepare("SELECT password, role, name FROM users WHERE student_id = ?");
+    query.addBindValue(studentId);
     
     if (!query.exec() || !query.next()) {
         return false;
@@ -184,17 +282,30 @@ bool Database::authenticateUser(const QString &username, const QString &password
     return true;
 }
 
-UserRole Database::getUserRole(const QString &username)
+UserRole Database::getUserRole(const QString &studentId)
 {
     QSqlQuery query(db);
-    query.prepare("SELECT role FROM users WHERE username = ?");
-    query.addBindValue(username);
+    query.prepare("SELECT role FROM users WHERE student_id = ?");
+    query.addBindValue(studentId);
     
     if (query.exec() && query.next()) {
         return static_cast<UserRole>(query.value(0).toInt());
     }
     
     return UserRole::Student;
+}
+
+bool Database::studentIdExists(const QString &studentId)
+{
+    QSqlQuery query(db);
+    query.prepare("SELECT COUNT(*) FROM users WHERE student_id = ?");
+    query.addBindValue(studentId);
+    
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt() > 0;
+    }
+    
+    return false;
 }
 
 int Database::createActivity(const QString &title, const QString &description,

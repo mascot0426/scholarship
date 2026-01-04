@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>LoginWindow</class>
- <widget class="QDialog" name="LoginWindow">
+ <class>RegisterWindow</class>
+ <widget class="QDialog" name="RegisterWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>350</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>登录</string>
+   <string>注册</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="titleLabel">
      <property name="text">
-      <string>校园活动管理系统</string>
+      <string>用户注册</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -46,45 +46,60 @@
    <item>
     <layout class="QFormLayout" name="formLayout">
      <item row="0" column="0">
-      <widget class="QLabel" name="usernameLabel">
+      <widget class="QLabel" name="nameLabel">
+       <property name="text">
+        <string>姓名：</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="nameLineEdit">
+       <property name="placeholderText">
+        <string>请输入姓名</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="studentIdLabel">
        <property name="text">
         <string>学工号：</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="usernameLineEdit">
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="studentIdLineEdit">
        <property name="placeholderText">
         <string>请输入学工号</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item row="2" column="0">
       <widget class="QLabel" name="passwordLabel">
        <property name="text">
         <string>密码：</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="passwordLineEdit">
-       <property name="echoMode">
-        <enum>QLineEdit::Password</enum>
-       </property>
-       <property name="placeholderText">
-        <string>请输入密码</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="roleLabel">
-       <property name="text">
-        <string>角色：</string>
-       </property>
-      </widget>
-     </item>
      <item row="2" column="1">
-      <widget class="QComboBox" name="roleComboBox"/>
+      <widget class="QLineEdit" name="passwordLineEdit">
+       <property name="placeholderText">
+        <string>请输入密码（至少6位）</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="confirmPasswordLabel">
+       <property name="text">
+        <string>确认密码：</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="confirmPasswordLineEdit">
+       <property name="placeholderText">
+        <string>请再次输入密码</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -117,9 +132,9 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="newWindowButton">
+      <widget class="QPushButton" name="cancelButton">
        <property name="text">
-        <string>新建窗口</string>
+        <string>取消</string>
        </property>
       </widget>
      </item>
@@ -127,13 +142,6 @@
       <widget class="QPushButton" name="registerButton">
        <property name="text">
         <string>注册</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="loginButton">
-       <property name="text">
-        <string>登录</string>
        </property>
        <property name="default">
         <bool>true</bool>
@@ -160,3 +168,5 @@
  <resources/>
  <connections/>
 </ui>
+
+

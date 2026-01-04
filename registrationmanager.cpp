@@ -19,19 +19,24 @@
 #include "csvexporter.h"
 #include "conflictchecker.h"
 
-RegistrationManager::RegistrationManager(Database *db, UserRole role, const QString &username, QWidget *parent)
+RegistrationManager::RegistrationManager(Database *db, UserRole role, const QString &studentId, const QString &studentName, QWidget *parent)
     : QWidget(parent)
     , database(db)
     , userRole(role)
-    , currentUsername(username)
+    , currentStudentId(studentId)
+    , currentStudentName(studentName)
 {
-    // 如果是学生，需要输入学号和姓名
-    if (role == UserRole::Student) {
-        currentStudentId = QInputDialog::getText(this, "学生信息", "请输入学号：", QLineEdit::Normal, "").trimmed();
+    // 如果是学生，且姓名未提供，才需要输入学号和姓名（向后兼容）
+    if (role == UserRole::Student && currentStudentName.isEmpty()) {
+        // 如果学号也为空，需要输入学号
         if (currentStudentId.isEmpty()) {
-            QMessageBox::warning(this, "错误", "学号不能为空！");
-            return;
+            currentStudentId = QInputDialog::getText(this, "学生信息", "请输入学号：", QLineEdit::Normal, "").trimmed();
+            if (currentStudentId.isEmpty()) {
+                QMessageBox::warning(this, "错误", "学号不能为空！");
+                return;
+            }
         }
+        // 输入姓名
         currentStudentName = QInputDialog::getText(this, "学生信息", "请输入姓名：", QLineEdit::Normal, "").trimmed();
         if (currentStudentName.isEmpty()) {
             QMessageBox::warning(this, "错误", "姓名不能为空！");
@@ -130,7 +135,7 @@ void RegistrationManager::setupUI()
         // 填充活动列表
         QList<QHash<QString, QVariant>> activities;
         if (userRole == UserRole::Organizer) {
-            activities = database->getActivities(QString("organizer = '%1'").arg(currentUsername));
+            activities = database->getActivities(QString("organizer = '%1'").arg(currentStudentId));
         } else {
             activities = database->getActivities();
         }

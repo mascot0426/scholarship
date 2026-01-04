@@ -13,6 +13,7 @@ SOURCES += \
     mainwindow.cpp \
     database.cpp \
     loginwindow.cpp \
+    registerwindow.cpp \
     activitymanager.cpp \
     registrationmanager.cpp \
     conflictchecker.cpp \
@@ -24,6 +25,7 @@ HEADERS += \
     mainwindow.h \
     database.h \
     loginwindow.h \
+    registerwindow.h \
     activitymanager.h \
     registrationmanager.h \
     conflictchecker.h \
@@ -33,7 +35,8 @@ HEADERS += \
 
 FORMS += \
     mainwindow.ui \
-    loginwindow.ui
+    loginwindow.ui \
+    registerwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

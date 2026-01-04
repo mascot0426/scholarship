@@ -113,12 +113,12 @@ void MainWindow::showLoginWindow()
     loginWindow = new LoginWindow(database, this);
     if (loginWindow->exec() == QDialog::Accepted && loginWindow->isLoggedIn()) {
         currentRole = loginWindow->getLoggedInRole();
-        currentUsername = loginWindow->getLoggedInUsername();
+        currentStudentId = loginWindow->getLoggedInStudentId();
         currentName = loginWindow->getLoggedInName();
         isLoggedIn = true;
         
         updateUIForRole();
-        statusLabel->setText(QString("欢迎，%1 (%2)").arg(currentName).arg(currentUsername));
+        statusLabel->setText(QString("欢迎，%1 (%2)").arg(currentName).arg(currentStudentId));
     } else {
         close();
     }
@@ -156,7 +156,7 @@ void MainWindow::onLogout()
     if (QMessageBox::question(this, "确认", "确定要退出登录吗？") == QMessageBox::Yes) {
         isLoggedIn = false;
         currentRole = UserRole::Student;
-        currentUsername.clear();
+        currentStudentId.clear();
         currentName.clear();
         
         // 清除标签页
@@ -192,14 +192,14 @@ void MainWindow::updateUIForRole()
         case UserRole::Organizer: roleText = "发起人"; break;
         case UserRole::Student: roleText = "学生"; break;
     }
-    userLabel->setText(QString("用户：%1 (%2) - %3").arg(currentName).arg(currentUsername).arg(roleText));
+    userLabel->setText(QString("用户：%1 (%2) - %3").arg(currentName).arg(currentStudentId).arg(roleText));
     
     // 创建活动管理标签页
-    activityManager = new ActivityManager(database, currentRole, currentUsername, networkManager, this);
+    activityManager = new ActivityManager(database, currentRole, currentStudentId, networkManager, this);
     tabWidget->addTab(activityManager, "活动管理");
     
     // 创建报名管理标签页
-    registrationManager = new RegistrationManager(database, currentRole, currentUsername, this);
+    registrationManager = new RegistrationManager(database, currentRole, currentStudentId, currentName, this);
     tabWidget->addTab(registrationManager, "报名管理");
 }
 

@@ -22,7 +22,7 @@ class ActivityManager : public QWidget
     Q_OBJECT
 
 public:
-    explicit ActivityManager(Database *db, UserRole role, const QString &username, NetworkManager *networkMgr = nullptr, QWidget *parent = nullptr);
+    explicit ActivityManager(Database *db, UserRole role, const QString &studentId, NetworkManager *networkMgr = nullptr, QWidget *parent = nullptr);
     void refreshActivities();
 
 private slots:
@@ -38,7 +38,7 @@ private:
     Database *database;
     NetworkManager *networkManager;
     UserRole userRole;
-    QString currentUsername;
+    QString currentStudentId;
     
     QTableWidget *activitiesTable;
     QPushButton *createButton;

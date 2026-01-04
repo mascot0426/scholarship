@@ -1,5 +1,6 @@
 #include "loginwindow.h"
 #include "ui_loginwindow.h"
+#include "registerwindow.h"
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QDebug>
@@ -32,18 +33,18 @@ LoginWindow::~LoginWindow()
 
 void LoginWindow::onLoginButtonClicked()
 {
-    QString username = ui->usernameLineEdit->text().trimmed();
+    QString studentId = ui->usernameLineEdit->text().trimmed();
     QString password = ui->passwordLineEdit->text();
     int selectedRole = ui->roleComboBox->currentData().toInt();
     
-    if (username.isEmpty() || password.isEmpty()) {
-        QMessageBox::warning(this, "登录失败", "请输入用户名和密码！");
+    if (studentId.isEmpty() || password.isEmpty()) {
+        QMessageBox::warning(this, "登录失败", "请输入学工号和密码！");
         return;
     }
     
     UserRole role;
     QString name;
-    if (database->authenticateUser(username, password, role, name)) {
+    if (database->authenticateUser(studentId, password, role, name)) {
         // 检查角色是否匹配
         if (static_cast<int>(role) != selectedRole) {
             QMessageBox::warning(this, "登录失败", "用户角色不匹配！");
@@ -51,50 +52,28 @@ void LoginWindow::onLoginButtonClicked()
         }
         
         loggedInRole = role;
-        loggedInUsername = username;
+        loggedInStudentId = studentId;
         loggedInName = name;
         loggedIn = true;
         
         accept(); // 关闭对话框并返回QDialog::Accepted
     } else {
-        QMessageBox::warning(this, "登录失败", "用户名或密码错误！");
+        QMessageBox::warning(this, "登录失败", "学工号或密码错误！");
         ui->passwordLineEdit->clear();
     }
 }
 
 void LoginWindow::onRegisterButtonClicked()
 {
-    QString username = ui->usernameLineEdit->text().trimmed();
-    QString password = ui->passwordLineEdit->text();
-    int selectedRole = ui->roleComboBox->currentData().toInt();
-    
-    if (username.isEmpty() || password.isEmpty()) {
-        QMessageBox::warning(this, "注册失败", "请输入用户名和密码！");
-        return;
+    // 打开注册窗口
+    RegisterWindow *registerWindow = new RegisterWindow(database, this);
+    if (registerWindow->exec() == QDialog::Accepted && registerWindow->isRegistered()) {
+        // 注册成功，自动填充学工号
+        QString registeredStudentId = registerWindow->getRegisteredStudentId();
+        ui->usernameLineEdit->setText(registeredStudentId);
+        ui->passwordLineEdit->setFocus();
     }
-    
-    if (password.length() < 6) {
-        QMessageBox::warning(this, "注册失败", "密码长度至少6位！");
-        return;
-    }
-    
-    // 学生和发起人可以注册，管理员只能由系统创建
-    if (selectedRole == static_cast<int>(UserRole::Admin)) {
-        QMessageBox::warning(this, "注册失败", "管理员账户不能通过注册创建！");
-        return;
-    }
-    
-    QString name = QInputDialog::getText(this, "注册", "请输入姓名：", QLineEdit::Normal, "");
-    if (name.isEmpty()) {
-        return;
-    }
-    
-    if (database->addUser(username, password, static_cast<UserRole>(selectedRole), name)) {
-        QMessageBox::information(this, "注册成功", "注册成功，请登录！");
-        ui->passwordLineEdit->clear();
-    } else {
-        QMessageBox::warning(this, "注册失败", "用户名已存在或注册失败！");
-    }
+    registerWindow->deleteLater();
 }
 
 void LoginWindow::onNewWindowButtonClicked()

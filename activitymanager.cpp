@@ -16,12 +16,12 @@
 #include <QHeaderView>
 #include <QDebug>
 
-ActivityManager::ActivityManager(Database *db, UserRole role, const QString &username, NetworkManager *networkMgr, QWidget *parent)
+ActivityManager::ActivityManager(Database *db, UserRole role, const QString &studentId, NetworkManager *networkMgr, QWidget *parent)
     : QWidget(parent)
     , database(db)
     , networkManager(networkMgr)
     , userRole(role)
-    , currentUsername(username)
+    , currentStudentId(studentId)
 {
     setupUI();
     refreshActivities();
@@ -100,7 +100,7 @@ void ActivityManager::populateTable()
     
     // 根据角色过滤
     if (userRole == UserRole::Organizer) {
-        filter = QString("organizer = '%1'").arg(currentUsername);
+        filter = QString("organizer = '%1'").arg(currentStudentId);
     } else if (userRole == UserRole::Student) {
         filter = "status = " + QString::number(static_cast<int>(ActivityStatus::Approved));
     }
@@ -192,7 +192,7 @@ void ActivityManager::onCreateActivity()
             titleEdit->text(),
             descriptionEdit->toPlainText(),
             categoryEdit->text(),
-            currentUsername,
+            currentStudentId,
             startTimeEdit->dateTime(),
             endTimeEdit->dateTime(),
             maxParticipantsEdit->value(),

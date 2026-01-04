@@ -6,6 +6,7 @@
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class LoginWindow; }
+class RegisterWindow;
 QT_END_NAMESPACE
 
 class LoginWindow : public QDialog
@@ -17,7 +18,7 @@ public:
     ~LoginWindow();
 
     UserRole getLoggedInRole() const { return loggedInRole; }
-    QString getLoggedInUsername() const { return loggedInUsername; }
+    QString getLoggedInStudentId() const { return loggedInStudentId; }
     QString getLoggedInName() const { return loggedInName; }
     bool isLoggedIn() const { return loggedIn; }
 
@@ -29,7 +30,7 @@ private:
     Ui::LoginWindow *ui;
     Database *database;
     UserRole loggedInRole;
-    QString loggedInUsername;
+    QString loggedInStudentId;
     QString loggedInName;
     bool loggedIn;
 };

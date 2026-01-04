@@ -17,7 +17,7 @@ class RegistrationManager : public QWidget
     Q_OBJECT
 
 public:
-    explicit RegistrationManager(Database *db, UserRole role, const QString &username, QWidget *parent = nullptr);
+    explicit RegistrationManager(Database *db, UserRole role, const QString &studentId, const QString &studentName = "", QWidget *parent = nullptr);
     void refreshRegistrations();
 
 private slots:
@@ -35,7 +35,6 @@ private slots:
 private:
     Database *database;
     UserRole userRole;
-    QString currentUsername;
     QString currentStudentId;
     QString currentStudentName;
     QTabWidget *tabWidget;  // 新增：标签页（学生角色使用）
