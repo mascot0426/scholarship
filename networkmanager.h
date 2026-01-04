@@ -43,7 +43,7 @@ private:
     int syncingActivityId;
     
     // 模拟服务器URL（实际使用时需要替换为真实服务器地址）
-    QString baseUrl = "http://localhost:8080/api";
+    QString baseUrl = "http://localhost:8090/api";
 };
 
 #endif // NETWORKMANAGER_H

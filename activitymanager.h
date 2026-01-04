@@ -33,6 +33,7 @@ private slots:
     void onSearchActivities();
     void onActivitySelectionChanged();
     void onRefreshActivities();
+    void onManualSync();
 
 private:
     Database *database;
@@ -48,6 +49,7 @@ private:
     QPushButton *searchButton;
     QLineEdit *searchLineEdit;
     QPushButton *refreshButton;  // 新增：刷新按钮
+    QPushButton *syncButton;    // 新增：手动同步按钮
     void setupUI();
     void populateTable();
     int getSelectedActivityId();

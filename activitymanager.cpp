@@ -23,6 +23,7 @@ ActivityManager::ActivityManager(Database *db, UserRole role, const QString &stu
     , networkManager(networkMgr)
     , userRole(role)
     , currentStudentId(studentId)
+    , syncButton(nullptr)
 {
     setupUI();
     refreshActivities();
@@ -67,6 +68,14 @@ void ActivityManager::setupUI()
     
     viewButton = new QPushButton("查看详情");
     buttonLayout->addWidget(viewButton);
+    
+    // 添加手动同步按钮（管理员和发起人可见）
+    if (userRole == UserRole::Admin || userRole == UserRole::Organizer) {
+        syncButton = new QPushButton("手动同步");
+        buttonLayout->addWidget(syncButton);
+        connect(syncButton, &QPushButton::clicked, this, &ActivityManager::onManualSync);
+    }
+    
     buttonLayout->addStretch();
     
     connect(viewButton, &QPushButton::clicked, this, &ActivityManager::onViewDetails);
@@ -354,6 +363,10 @@ void ActivityManager::onActivitySelectionChanged()
         approveButton->setEnabled(hasSelection);
         rejectButton->setEnabled(hasSelection);
     }
+    
+    if ((userRole == UserRole::Admin || userRole == UserRole::Organizer) && syncButton) {
+        syncButton->setEnabled(hasSelection);
+    }
 }
 
 int ActivityManager::getSelectedActivityId()
@@ -438,4 +451,67 @@ void ActivityManager::showActivityDialog(const QHash<QString, QVariant> &activit
 void ActivityManager::onRefreshActivities()
 {
     refreshActivities();
+}
+
+void ActivityManager::onManualSync()
+{
+    int activityId = getSelectedActivityId();
+    if (activityId <= 0) {
+        QMessageBox::warning(this, "提示", "请选择要同步的活动！");
+        return;
+    }
+    
+    // 获取活动数据
+    QHash<QString, QVariant> activity = database->getActivity(activityId);
+    if (activity.isEmpty()) {
+        QMessageBox::warning(this, "错误", "活动不存在！");
+        return;
+    }
+    
+    // 检查活动状态，只有已批准的活动才能同步
+    ActivityStatus status = static_cast<ActivityStatus>(activity["status"].toInt());
+    if (status != ActivityStatus::Approved) {
+        QMessageBox::warning(this, "提示", "只能同步已批准的活动！");
+        return;
+    }
+    
+    if (!networkManager) {
+        QMessageBox::warning(this, "错误", "网络管理器未初始化，无法同步！");
+        return;
+    }
+    
+    // 确认同步
+    if (QMessageBox::question(this, "确认同步", 
+        QString("确定要同步活动 \"%1\" 到校园平台吗？").arg(activity["title"].toString()),
+        QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+    
+    qDebug() << "[手动同步] 准备同步活动ID:" << activityId;
+    networkManager->syncActivityToPlatform(activityId, activity);
+    
+    // 连接信号以显示同步结果
+    QMetaObject::Connection *connection = new QMetaObject::Connection();
+    *connection = connect(networkManager, &NetworkManager::activitySynced, this, [this, activityId, connection](int id, bool success) {
+        qDebug() << "[手动同步回调] 活动ID:" << id << "成功:" << success;
+        if (id == activityId) {
+            QTimer::singleShot(500, this, [this, success, connection]() {
+                if (success) {
+                    qDebug() << "[手动同步成功] 显示成功提示";
+                    QMessageBox::information(this, "同步成功", "活动已成功同步到校园平台！");
+                } else {
+                    qDebug() << "[手动同步失败] 显示失败提示";
+                    QMessageBox::warning(this, "同步失败", "活动同步到校园平台失败，请检查网络连接！");
+                }
+                // 断开连接（单次触发）
+                disconnect(*connection);
+                delete connection;
+            });
+        } else {
+            qDebug() << "[手动同步回调] 活动ID不匹配，忽略。期望:" << activityId << "实际:" << id;
+            // 即使ID不匹配也要清理连接
+            disconnect(*connection);
+            delete connection;
+        }
+    });
 }

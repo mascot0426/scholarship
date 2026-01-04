@@ -2,7 +2,7 @@
 
 ## 问题解答
 
-### 为什么访问 `http://localhost:8080/api/sync` 显示 "Cannot GET /api/sync"？
+### 为什么访问 `http://localhost:8090/api/sync` 显示 "Cannot GET /api/sync"？
 
 **原因**：
 1. **路径错误**：正确的端点是 `/api/activities/sync`，不是 `/api/sync`
@@ -12,7 +12,7 @@
 
 ### 1. 同步活动信息（POST）
 
-- **URL**: `POST http://localhost:8080/api/activities/sync`
+- **URL**: `POST http://localhost:8090/api/activities/sync`
 - **方法**: POST（必须）
 - **Content-Type**: `application/json`
 - **功能**: 同步活动信息到校园平台
@@ -21,7 +21,7 @@
 
 ### 2. 查看已同步的活动（GET）
 
-- **URL**: `GET http://localhost:8080/api/synced-activities`
+- **URL**: `GET http://localhost:8090/api/synced-activities`
 - **方法**: GET
 - **功能**: 查看所有已同步的活动列表
 
@@ -33,7 +33,7 @@
 
 直接在浏览器地址栏输入：
 ```
-http://localhost:8080/api/synced-activities
+http://localhost:8090/api/synced-activities
 ```
 
 应该看到类似这样的JSON响应：
@@ -60,7 +60,7 @@ http://localhost:8080/api/synced-activities
 4. 粘贴以下代码并回车：
 
 ```javascript
-fetch('http://localhost:8080/api/activities/sync', {
+fetch('http://localhost:8090/api/activities/sync', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json'
@@ -96,7 +96,7 @@ fetch('http://localhost:8080/api/activities/sync', {
 
 **Windows PowerShell**:
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/activities/sync" `
+Invoke-RestMethod -Uri "http://localhost:8090/api/activities/sync" `
     -Method POST `
     -ContentType "application/json" `
     -Body '{"id":999,"title":"测试活动","category":"学术讲座","organizer":"测试发起人","start_time":"2024-02-01T10:00:00","end_time":"2024-02-01T12:00:00","max_participants":100,"location":"测试地点","status":1}'
@@ -104,7 +104,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/activities/sync" `
 
 **Linux/Mac**:
 ```bash
-curl -X POST http://localhost:8080/api/activities/sync \
+curl -X POST http://localhost:8090/api/activities/sync \
   -H "Content-Type: application/json" \
   -d '{
     "id": 999,
@@ -126,7 +126,7 @@ curl -X POST http://localhost:8080/api/activities/sync \
 2. 创建新请求
 3. 设置：
    - **Method**: POST
-   - **URL**: `http://localhost:8080/api/activities/sync`
+   - **URL**: `http://localhost:8090/api/activities/sync`
    - **Headers**: `Content-Type: application/json`
    - **Body**: 选择 "raw" 和 "JSON"，然后输入JSON数据
 
@@ -136,11 +136,11 @@ curl -X POST http://localhost:8080/api/activities/sync \
 
 | 端点 | 说明 | 示例URL |
 |------|------|---------|
-| `/api/categories` | 获取活动类别 | http://localhost:8080/api/categories |
-| `/api/announcements` | 获取公告 | http://localhost:8080/api/announcements |
-| `/api/synced-activities` | 查看已同步活动 | http://localhost:8080/api/synced-activities |
-| `/api/health` | 健康检查 | http://localhost:8080/api/health |
-| `/` | API文档 | http://localhost:8080/ |
+| `/api/categories` | 获取活动类别 | http://localhost:8090/api/categories |
+| `/api/announcements` | 获取公告 | http://localhost:8090/api/announcements |
+| `/api/synced-activities` | 查看已同步活动 | http://localhost:8090/api/synced-activities |
+| `/api/health` | 健康检查 | http://localhost:8090/api/health |
+| `/` | API文档 | http://localhost:8090/ |
 
 ### POST端点（不能在浏览器中直接访问）
 
@@ -179,8 +179,8 @@ curl -X POST http://localhost:8080/api/activities/sync \
 ## 快速测试清单
 
 - [ ] 服务器正在运行（端口8080）
-- [ ] 浏览器可以访问 `http://localhost:8080/api/health`
-- [ ] 浏览器可以访问 `http://localhost:8080/api/synced-activities`
+- [ ] 浏览器可以访问 `http://localhost:8090/api/health`
+- [ ] 浏览器可以访问 `http://localhost:8090/api/synced-activities`
 - [ ] 使用POST方法测试 `/api/activities/sync`
 
 ## 总结
@@ -190,6 +190,6 @@ curl -X POST http://localhost:8080/api/activities/sync \
 
 如果想快速查看同步结果，访问：
 ```
-http://localhost:8080/api/synced-activities
+http://localhost:8090/api/synced-activities
 ```
 

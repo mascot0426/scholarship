@@ -7,7 +7,7 @@
 启动方法：
     python test_server.py
 
-服务器将在 http://localhost:8080 启动
+服务器将在 http://localhost:8090 启动
 """
 
 from flask import Flask, jsonify, request
@@ -124,6 +124,32 @@ def get_synced_activities():
     })
 
 
+@app.route('/api/synced-activities', methods=['DELETE'])
+def clear_synced_activities():
+    """清除所有已同步的活动（用于测试和调试）"""
+    count = len(synced_activities)
+    synced_activities.clear()
+    print(f"[清除数据] 已清除 {count} 条活动记录")
+    return jsonify({
+        "success": True,
+        "message": f"已清除 {count} 条活动记录",
+        "cleared_count": count
+    })
+
+
+@app.route('/api/synced-activities/clear', methods=['POST'])
+def clear_synced_activities_post():
+    """清除所有已同步的活动（POST方法，方便浏览器调用）"""
+    count = len(synced_activities)
+    synced_activities.clear()
+    print(f"[清除数据] 已清除 {count} 条活动记录")
+    return jsonify({
+        "success": True,
+        "message": f"已清除 {count} 条活动记录",
+        "cleared_count": count
+    })
+
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """健康检查端点"""
@@ -145,9 +171,11 @@ def index():
             "GET /api/announcements": "获取公告列表",
             "POST /api/activities/sync": "同步活动信息",
             "GET /api/synced-activities": "获取已同步的活动（测试用）",
+            "DELETE /api/synced-activities": "清除所有已同步的活动",
+            "POST /api/synced-activities/clear": "清除所有已同步的活动（POST方法）",
             "GET /api/health": "健康检查"
         },
-        "usage": "在Qt应用程序中配置 baseUrl = 'http://localhost:8080/api'"
+        "usage": "在Qt应用程序中配置 baseUrl = 'http://localhost:8090/api'"
     })
 
 
@@ -155,8 +183,8 @@ if __name__ == '__main__':
     print("=" * 60)
     print("校园活动管理系统 - 测试服务器")
     print("=" * 60)
-    print("服务器地址: http://localhost:8080")
-    print("API基础路径: http://localhost:8080/api")
+    print("服务器地址: http://localhost:8090")
+    print("API基础路径: http://localhost:8090/api")
     print("=" * 60)
     print("\n可用端点:")
     print("  GET  /api/categories          - 获取活动类别")
@@ -170,7 +198,7 @@ if __name__ == '__main__':
     # 启动服务器
     app.run(
         host='0.0.0.0',  # 允许外部访问
-        port=8080,
+        port=8090,
         debug=True,      # 调试模式
         threaded=True    # 多线程支持
     )

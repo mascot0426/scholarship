@@ -5,14 +5,14 @@
  * 启动方法：
  *     node test_server.js
  * 
- * 服务器将在 http://localhost:8080 启动
+ * 服务器将在 http://localhost:8090 启动
  */
 
 const express = require('express');
 const cors = require('cors');
 
 const app = express();
-const PORT = 8080;
+const PORT = 8090;
 
 // 中间件配置
 app.use(cors()); // 允许跨域请求
@@ -122,6 +122,30 @@ app.get('/api/synced-activities', (req, res) => {
     });
 });
 
+// 清除所有已同步的活动（用于测试和调试）
+app.delete('/api/synced-activities', (req, res) => {
+    const count = syncedActivities.length;
+    syncedActivities = [];
+    console.log(`[清除数据] 已清除 ${count} 条活动记录`);
+    res.json({
+        success: true,
+        message: `已清除 ${count} 条活动记录`,
+        cleared_count: count
+    });
+});
+
+// 清除所有已同步的活动（POST方法，方便浏览器调用）
+app.post('/api/synced-activities/clear', (req, res) => {
+    const count = syncedActivities.length;
+    syncedActivities = [];
+    console.log(`[清除数据] 已清除 ${count} 条活动记录`);
+    res.json({
+        success: true,
+        message: `已清除 ${count} 条活动记录`,
+        cleared_count: count
+    });
+});
+
 // 健康检查端点
 app.get('/api/health', (req, res) => {
     res.json({
@@ -141,9 +165,11 @@ app.get('/', (req, res) => {
             "GET /api/announcements": "获取公告列表",
             "POST /api/activities/sync": "同步活动信息",
             "GET /api/synced-activities": "获取已同步的活动（测试用）",
+            "DELETE /api/synced-activities": "清除所有已同步的活动",
+            "POST /api/synced-activities/clear": "清除所有已同步的活动（POST方法）",
             "GET /api/health": "健康检查"
         },
-        usage: "在Qt应用程序中配置 baseUrl = 'http://localhost:8080/api'"
+        usage: "在Qt应用程序中配置 baseUrl = 'http://localhost:8090/api'"
     });
 });
 
@@ -156,11 +182,13 @@ app.listen(PORT, () => {
     console.log(`API基础路径: http://localhost:${PORT}/api`);
     console.log("=".repeat(60));
     console.log("\n可用端点:");
-    console.log("  GET  /api/categories          - 获取活动类别");
-    console.log("  GET  /api/announcements        - 获取公告");
-    console.log("  POST /api/activities/sync      - 同步活动");
-    console.log("  GET  /api/synced-activities    - 查看已同步活动");
-    console.log("  GET  /api/health               - 健康检查");
+    console.log("  GET  /api/categories              - 获取活动类别");
+    console.log("  GET  /api/announcements          - 获取公告");
+    console.log("  POST /api/activities/sync        - 同步活动");
+    console.log("  GET  /api/synced-activities      - 查看已同步活动");
+    console.log("  DELETE /api/synced-activities    - 清除所有已同步活动");
+    console.log("  POST /api/synced-activities/clear - 清除所有已同步活动（POST）");
+    console.log("  GET  /api/health                 - 健康检查");
     console.log("=".repeat(60));
     console.log("\n按 Ctrl+C 停止服务器\n");
 });
