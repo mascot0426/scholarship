@@ -29,6 +29,7 @@ private slots:
     void onRefreshRegistrations();
     void onViewActivityDetails();  // 新增：查看活动详情
     void onRegisterFromDetails();  // 新增：从详情对话框报名
+    void onJoinWaitlist();  // 新增：进入候补序列
     void onCheckIn();  // 新增：签到
     void onViewCheckInList();  // 新增：查看签到列表
     void onViewCheckInStatistics();  // 新增：查看签到统计

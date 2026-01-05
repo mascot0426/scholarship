@@ -655,7 +655,30 @@ bool Database::promoteFromWaitlist(int activityId)
     query.addBindValue(studentName);
     query.addBindValue(static_cast<int>(RegistrationStatus::Registered));
     
-    return query.exec();
+    if (!query.exec()) {
+        return false;
+    }
+    
+    // 更新活动参与人数
+    query.prepare("UPDATE activities SET current_participants = current_participants + 1 WHERE id = ?");
+    query.addBindValue(activityId);
+    query.exec();
+    
+    return true;
+}
+
+bool Database::isInWaitlist(int activityId, const QString &studentId)
+{
+    QSqlQuery query(db);
+    query.prepare("SELECT COUNT(*) FROM waitlist WHERE activity_id = ? AND student_id = ?");
+    query.addBindValue(activityId);
+    query.addBindValue(studentId);
+    
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt() > 0;
+    }
+    
+    return false;
 }
 
 QList<QHash<QString, QVariant>> Database::checkTimeConflict(const QString &studentId,
