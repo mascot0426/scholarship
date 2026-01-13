@@ -73,7 +73,6 @@ public:
     bool addToWaitlist(int activityId, const QString &studentId, const QString &studentName);
     QList<QHash<QString, QVariant>> getWaitlist(int activityId);
     bool promoteFromWaitlist(int activityId);
-    bool isInWaitlist(int activityId, const QString &studentId);
     
     // 冲突检测
     QList<QHash<QString, QVariant>> checkTimeConflict(const QString &studentId, 

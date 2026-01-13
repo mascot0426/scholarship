@@ -579,31 +579,11 @@ void RegistrationManager::showActivityDetailsDialog(int activityId)
     descEdit->setMaximumHeight(150);
     layout->addWidget(descEdit);
     
-    // 检查活动是否已满
-    int current = activity["current_participants"].toInt();
-    int max = activity["max_participants"].toInt();
-    bool isFull = current >= max;
-    bool isInWaitlist = database->isInWaitlist(activityId, currentStudentId);
-    
     // 添加报名按钮
     QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    
-    if (isFull) {
-        // 活动已满，显示进入候补序列按钮
-        if (isInWaitlist) {
-            buttonBox->button(QDialogButtonBox::Ok)->setText("已在候补序列");
-            buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
-        } else {
-            buttonBox->button(QDialogButtonBox::Ok)->setText("进入候补序列");
-            connect(buttonBox, &QDialogButtonBox::accepted, this, &RegistrationManager::onJoinWaitlist);
-        }
-    } else {
-        // 活动未满，显示立即报名按钮
-        buttonBox->button(QDialogButtonBox::Ok)->setText("立即报名");
-        connect(buttonBox, &QDialogButtonBox::accepted, this, &RegistrationManager::onRegisterFromDetails);
-    }
-    
+    buttonBox->button(QDialogButtonBox::Ok)->setText("立即报名");
     buttonBox->button(QDialogButtonBox::Cancel)->setText("关闭");
+    connect(buttonBox, &QDialogButtonBox::accepted, this, &RegistrationManager::onRegisterFromDetails);
     connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     
@@ -660,58 +640,6 @@ void RegistrationManager::onRegisterFromDetails()
         } else {
             QMessageBox::warning(this, "失败", "报名失败！");
         }
-    }
-}
-
-void RegistrationManager::onJoinWaitlist()
-{
-    int activityId = selectedActivityIdForRegistration;
-    if (activityId <= 0) return;
-    
-    QHash<QString, QVariant> activity = database->getActivity(activityId);
-    if (activity.isEmpty()) {
-        QMessageBox::warning(this, "错误", "活动不存在！");
-        return;
-    }
-    
-    ActivityStatus status = static_cast<ActivityStatus>(activity["status"].toInt());
-    if (status != ActivityStatus::Approved) {
-        QMessageBox::warning(this, "错误", "该活动尚未批准，无法加入候补！");
-        return;
-    }
-    
-    // 检查是否已报名
-    if (database->isRegistered(activityId, currentStudentId)) {
-        QMessageBox::information(this, "提示", "您已经报名了此活动！");
-        refreshRegistrations();
-        return;
-    }
-    
-    // 检查是否已在候补列表中
-    if (database->isInWaitlist(activityId, currentStudentId)) {
-        QMessageBox::information(this, "提示", "您已经在候补序列中！");
-        refreshRegistrations();
-        return;
-    }
-    
-    // 检查时间冲突
-    QDateTime startTime = activity["start_time"].toDateTime();
-    QDateTime endTime = activity["end_time"].toDateTime();
-    QList<QHash<QString, QVariant>> conflicts = database->checkTimeConflict(currentStudentId, startTime, endTime);
-    
-    if (!conflicts.isEmpty()) {
-        showConflictDialog(conflicts);
-        if (QMessageBox::question(this, "时间冲突", "检测到时间冲突，是否仍要加入候补序列？") != QMessageBox::Yes) {
-            return;
-        }
-    }
-    
-    // 加入候补序列
-    if (database->addToWaitlist(activityId, currentStudentId, currentStudentName)) {
-        QMessageBox::information(this, "成功", "已成功加入候补序列！\n当有人取消报名时，系统会自动将您提升为正式报名。");
-        refreshRegistrations();
-    } else {
-        QMessageBox::warning(this, "失败", "加入候补序列失败！");
     }
 }
 
